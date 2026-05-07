@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* BRRA Design System — Ivory & Gold (light) */
+
+@layer base {
+  :root {
+    --background: 40 30% 97%;          /* warm ivory */
+    --foreground: 0 0% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+
+    --primary: 38 55% 42%;             /* deeper gold for contrast on light */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 40 25% 93%;
+    --secondary-foreground: 0 0% 8%;
+
+    --muted: 40 20% 94%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 44 76% 62%;
+    --accent-foreground: 0 0% 8%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 15% 86%;
+    --input: 40 15% 86%;
+    --ring: 38 55% 42%;
+
+    --radius: 0.25rem;
+
+    /* Brand surfaces — repurposed for light theme */
+    --noir: 40 30% 97%;
+    --noir-elevated: 40 25% 94%;
+    --gold: 38 55% 42%;
+    --gold-bright: 44 70% 55%;
+    --hairline: 40 15% 80%;
+
+    /* Gradients */
+    --gradient-gold: linear-gradient(135deg, hsl(38 55% 42%), hsl(44 70% 55%));
+    --gradient-noir: linear-gradient(180deg, hsl(40 30% 97%) 0%, hsl(40 25% 93%) 100%);
+    --gradient-overlay: linear-gradient(180deg, hsl(0 0% 0% / 0.1) 0%, hsl(40 30% 97% / 0.95) 100%);
+
+    /* Shadows */
+    --shadow-gold: 0 10px 40px -12px hsl(38 55% 42% / 0.35);
+    --shadow-deep: 0 20px 60px -20px hsl(0 0% 0% / 0.18);
+
+    /* Sidebar */
+    --sidebar-background: 40 30% 97%;
+    --sidebar-foreground: 0 0% 12%;
+    --sidebar-primary: 38 55% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 40 25% 93%;
+    --sidebar-accent-foreground: 0 0% 8%;
+    --sidebar-border: 40 15% 86%;
+    --sidebar-ring: 38 55% 42%;
+  }
+
+  .dark {
+    --background: 0 0% 5%;
+    --foreground: 42 38% 92%;
+    --card: 0 0% 8%;
+    --card-foreground: 42 38% 92%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 42 38% 92%;
+    --primary: 44 51% 54%;
+    --primary-foreground: 0 0% 5%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 42 38% 92%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 42 12% 65%;
+    --accent: 44 76% 75%;
+    --accent-foreground: 0 0% 5%;
+    --border: 44 20% 18%;
+    --input: 44 20% 18%;
+    --ring: 44 51% 54%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Epilogue', system-ui, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Urbanist', system-ui, sans-serif;
+    @apply tracking-tight;
+  }
+  ::selection {
+    background: hsl(var(--gold) / 0.3);
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer components {
+  .container-narrow { @apply mx-auto max-w-6xl px-6 lg:px-8; }
+  .container-wide { @apply mx-auto max-w-7xl px-6 lg:px-8; }
+  .eyebrow { @apply text-xs uppercase tracking-[0.25em] text-primary font-semibold; }
+  .gold-rule { @apply h-px w-12 bg-gradient-to-r from-primary to-transparent; }
+  .text-gradient-gold {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hairline { @apply border-t border-border/60; }
+}
+
+@layer utilities {
+  .shadow-gold { box-shadow: var(--shadow-gold); }
+  .shadow-deep { box-shadow: var(--shadow-deep); }
+  .bg-noir { background: hsl(var(--noir)); }
+  .bg-noir-elevated { background: hsl(var(--noir-elevated)); }
+  .bg-gradient-gold { background: var(--gradient-gold); }
+  .bg-gradient-noir { background: var(--gradient-noir); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shimmer { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+.animate-fade-up { animation: fade-up 0.8s ease-out both; }
+.animate-fade-in { animation: fade-in 1s ease-out both; }
+.animate-shimmer { animation: shimmer 3s ease-in-out infinite; }
