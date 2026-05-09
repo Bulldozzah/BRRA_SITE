@@ -19,6 +19,8 @@ import RiaSubmission from "./pages/RiaSubmission";
 import RiaTracking from "./pages/RiaTracking";
 import PortalLogin from "./pages/PortalLogin";
 import PortalRegister from "./pages/PortalRegister";
+import PortalForgotPassword from "./pages/PortalForgotPassword";
+import PortalResetPassword from "./pages/PortalResetPassword";
 import PortalDashboard from "./pages/PortalDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminDepartmentsPage from "./pages/admin/AdminDepartmentsPage";
@@ -28,6 +30,16 @@ import AdminStaffPage from "./pages/admin/AdminStaffPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminNewsPage from "./pages/admin/AdminNewsPage";
 import AdminDocumentsPage from "./pages/admin/AdminDocumentsPage";
+import AdminLeavePage from "./pages/admin/AdminLeavePage";
+import LeaveDashboard from "./pages/leave/LeaveDashboard";
+import LeaveApplication from "./pages/leave/LeaveApplication";
+import LeaveApprovals from "./pages/leave/LeaveApprovals";
+import StaffLeavePage from "./pages/staff/StaffLeavePage";
+import StaffLeaveApprovalsPage from "./pages/staff/StaffLeaveApprovalsPage";
+import StaffLeavePendingPage from "./pages/staff/StaffLeavePendingPage";
+import StaffLeaveRecordsPage from "./pages/staff/StaffLeaveRecordsPage";
+import AnnualLeaveApplication from "./pages/leave/AnnualLeaveApplication";
+import AnnualLeaveApprovals from "./pages/leave/AnnualLeaveApprovals";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -57,6 +69,8 @@ const App = () => (
           <Route path="/ria-tracking" element={<RiaTracking />} />
           <Route path="/portal/login" element={<PortalLogin />} />
           <Route path="/portal/register" element={<PortalRegister />} />
+          <Route path="/portal/forgot-password" element={<PortalForgotPassword />} />
+          <Route path="/portal/reset-password" element={<PortalResetPassword />} />
           <Route path="/portal/dashboard" element={<PortalDashboard />} />
           <Route path="/portal/admin" element={<AdminDashboard />} />
           <Route path="/portal/admin/departments" element={<AdminDepartmentsPage />} />
@@ -66,6 +80,16 @@ const App = () => (
           <Route path="/portal/admin/users" element={<AdminUsersPage />} />
           <Route path="/portal/admin/news" element={<AdminNewsPage />} />
           <Route path="/portal/admin/documents" element={<AdminDocumentsPage />} />
+          <Route path="/portal/admin/leave" element={<AdminLeavePage />} />
+          <Route path="/portal/leave" element={<LeaveDashboard />} />
+          <Route path="/portal/leave/apply" element={<LeaveApplication />} />
+          <Route path="/portal/leave/approvals" element={<LeaveApprovals />} />
+          <Route path="/portal/staff/leave" element={<StaffLeavePage />} />
+          <Route path="/portal/staff/leave/approvals" element={<StaffLeaveApprovalsPage />} />
+          <Route path="/portal/staff/leave/pending" element={<StaffLeavePendingPage />} />
+          <Route path="/portal/staff/leave/records" element={<StaffLeaveRecordsPage />} />
+          <Route path="/portal/leave/annual/apply" element={<AnnualLeaveApplication />} />
+          <Route path="/portal/leave/annual/approvals" element={<AnnualLeaveApprovals />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

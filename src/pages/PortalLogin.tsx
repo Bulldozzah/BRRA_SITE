@@ -55,6 +55,8 @@ export default function PortalLogin() {
           <div className="mt-6 space-y-3">
             <p className="text-xs text-muted-foreground text-center">
               No account? <Link to="/portal/register" className="text-primary hover:underline">Register</Link>
+              {" • "}
+              <Link to="/portal/forgot-password" className="text-primary hover:underline">Forgot Password?</Link>
             </p>
           </div>
         </div>

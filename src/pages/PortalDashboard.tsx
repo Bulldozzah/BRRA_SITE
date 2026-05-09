@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
-import { Shield, Users, FileText, LogOut, Settings, Activity, ClipboardList } from "lucide-react";
+import { Shield, Users, FileText, LogOut, Settings, Activity, ClipboardList, CalendarDays } from "lucide-react";
 
 export default function PortalDashboard() {
   const { user, loading, logout } = useAuth();
@@ -46,11 +46,11 @@ export default function PortalDashboard() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border">
           {getCards(user.role).map((c) => (
-            <div key={c.title} className="bg-noir-elevated/40 p-8">
+            <Link key={c.title} to={c.path || "#"} className="bg-noir-elevated/40 p-8 hover:bg-noir-elevated/70 transition-colors">
               <c.icon className="h-7 w-7 text-primary mb-5" />
               <h3 className="font-display text-lg font-bold mb-2">{c.title}</h3>
               <p className="text-sm text-muted-foreground">{c.desc}</p>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -60,27 +60,29 @@ export default function PortalDashboard() {
 
 function getCards(role: string) {
   const common = [
-    { icon: FileText, title: "My Submissions", desc: "View RIA submissions and track their review status." },
-    { icon: Activity, title: "Recent Activity", desc: "Updates on licenses, permits and notifications." },
+    { icon: FileText, title: "My Submissions", desc: "View RIA submissions and track their review status.", path: "#" },
+    { icon: Activity, title: "Recent Activity", desc: "Updates on licenses, permits and notifications.", path: "#" },
+    { icon: CalendarDays, title: "Leave Management", desc: "Apply for leave, view balances and track applications.", path: "/portal/leave" },
   ];
   if (role === "admin") {
     return [
-      { icon: Shield, title: "Admin Console", desc: "Full system access, role assignments and audit logs." },
-      { icon: Users, title: "User Management", desc: "Manage staff accounts, registrations and access." },
-      { icon: Settings, title: "System Settings", desc: "Configure portal-wide options and integrations." },
+      { icon: Shield, title: "Admin Console", desc: "Full system access, role assignments and audit logs.", path: "/portal/admin" },
+      { icon: Users, title: "User Management", desc: "Manage staff accounts, registrations and access.", path: "/portal/admin/users" },
+      { icon: Settings, title: "System Settings", desc: "Configure portal-wide options and integrations.", path: "#" },
       ...common,
-      { icon: ClipboardList, title: "All RIA Reviews", desc: "Approve, reject or comment on submitted RIAs." },
+      { icon: ClipboardList, title: "All RIA Reviews", desc: "Approve, reject or comment on submitted RIAs.", path: "#" },
     ];
   }
   if (role === "staff") {
     return [
-      { icon: ClipboardList, title: "Review Queue", desc: "Process pending RIA submissions assigned to you." },
-      { icon: Users, title: "Stakeholders", desc: "Communicate with applicants and regulatory bodies." },
+      { icon: ClipboardList, title: "Review Queue", desc: "Process pending RIA submissions assigned to you.", path: "#" },
+      { icon: CalendarDays, title: "Leave Dashboard", desc: "Manage leave applications, approvals and records.", path: "/portal/staff/leave" },
+      { icon: Users, title: "Stakeholders", desc: "Communicate with applicants and regulatory bodies.", path: "#" },
       ...common,
     ];
   }
   return [
     ...common,
-    { icon: Settings, title: "Account Settings", desc: "Update your profile and notification preferences." },
+    { icon: Settings, title: "Account Settings", desc: "Update your profile and notification preferences.", path: "#" },
   ];
 }

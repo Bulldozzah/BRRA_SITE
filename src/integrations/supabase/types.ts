@@ -308,6 +308,481 @@ export type Database = {
           { foreignKeyName: "documents_uploaded_by_fkey"; columns: ["uploaded_by"]; referencedRelation: "profiles"; referencedColumns: ["id"] }
         ]
       }
+      leave_applications: {
+        Row: {
+          id: string
+          employee_id: string
+          user_id: string
+          leave_type: "annual" | "sick" | "study" | "maternity" | "paternity" | "compassionate" | "unpaid"
+          start_date: string
+          end_date: string
+          requested_days: number
+          leave_address: string | null
+          last_leave_end_date: string | null
+          months_since_last_leave: number | null
+          leave_rate: number
+          days_accrued: number | null
+          leave_balance: number | null
+          status: "pending" | "recommended" | "approved" | "rejected" | "cancelled"
+          hod_id: string | null
+          hod_recommendation: string | null
+          hod_comment: string | null
+          hod_date: string | null
+          approved_days: number | null
+          approver_id: string | null
+          approver_comment: string | null
+          approval_date: string | null
+          rejection_reason: string | null
+          attachment_url: string | null
+          attachment_name: string | null
+          application_date: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          employee_id: string
+          user_id: string
+          leave_type?: "annual" | "sick" | "study" | "maternity" | "paternity" | "compassionate" | "unpaid"
+          start_date: string
+          end_date: string
+          requested_days: number
+          leave_address?: string | null
+          last_leave_end_date?: string | null
+          months_since_last_leave?: number | null
+          leave_rate?: number
+          days_accrued?: number | null
+          leave_balance?: number | null
+          status?: "pending" | "recommended" | "approved" | "rejected" | "cancelled"
+          hod_id?: string | null
+          hod_recommendation?: string | null
+          hod_comment?: string | null
+          hod_date?: string | null
+          approved_days?: number | null
+          approver_id?: string | null
+          approver_comment?: string | null
+          approval_date?: string | null
+          rejection_reason?: string | null
+          attachment_url?: string | null
+          attachment_name?: string | null
+          application_date?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          employee_id?: string
+          user_id?: string
+          leave_type?: "annual" | "sick" | "study" | "maternity" | "paternity" | "compassionate" | "unpaid"
+          start_date?: string
+          end_date?: string
+          requested_days?: number
+          leave_address?: string | null
+          last_leave_end_date?: string | null
+          months_since_last_leave?: number | null
+          leave_rate?: number
+          days_accrued?: number | null
+          leave_balance?: number | null
+          status?: "pending" | "recommended" | "approved" | "rejected" | "cancelled"
+          hod_id?: string | null
+          hod_recommendation?: string | null
+          hod_comment?: string | null
+          hod_date?: string | null
+          approved_days?: number | null
+          approver_id?: string | null
+          approver_comment?: string | null
+          approval_date?: string | null
+          rejection_reason?: string | null
+          attachment_url?: string | null
+          attachment_name?: string | null
+          application_date?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "leave_applications_employee_id_fkey"; columns: ["employee_id"]; referencedRelation: "staff_profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "leave_applications_user_id_fkey"; columns: ["user_id"]; referencedRelation: "profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "leave_applications_hod_id_fkey"; columns: ["hod_id"]; referencedRelation: "profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "leave_applications_approver_id_fkey"; columns: ["approver_id"]; referencedRelation: "profiles"; referencedColumns: ["id"] }
+        ]
+      }
+      leave_balances: {
+        Row: {
+          id: string
+          employee_id: string
+          leave_type: "annual" | "sick" | "study" | "maternity" | "paternity" | "compassionate" | "unpaid"
+          total_entitlement: number
+          days_taken: number
+          days_remaining: number
+          year: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          employee_id: string
+          leave_type: "annual" | "sick" | "study" | "maternity" | "paternity" | "compassionate" | "unpaid"
+          total_entitlement?: number
+          days_taken?: number
+          days_remaining?: number
+          year?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          employee_id?: string
+          leave_type?: "annual" | "sick" | "study" | "maternity" | "paternity" | "compassionate" | "unpaid"
+          total_entitlement?: number
+          days_taken?: number
+          days_remaining?: number
+          year?: number
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "leave_balances_employee_id_fkey"; columns: ["employee_id"]; referencedRelation: "staff_profiles"; referencedColumns: ["id"] }
+        ]
+      }
+      leave_settings: {
+        Row: {
+          id: string
+          leave_type: "annual" | "sick" | "study" | "maternity" | "paternity" | "compassionate" | "unpaid"
+          days_per_year: number
+          rate_per_month: number
+          requires_attachment: boolean
+          max_carry_over: number | null
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          leave_type: "annual" | "sick" | "study" | "maternity" | "paternity" | "compassionate" | "unpaid"
+          days_per_year?: number
+          rate_per_month?: number
+          requires_attachment?: boolean
+          max_carry_over?: number | null
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          leave_type?: "annual" | "sick" | "study" | "maternity" | "paternity" | "compassionate" | "unpaid"
+          days_per_year?: number
+          rate_per_month?: number
+          requires_attachment?: boolean
+          max_carry_over?: number | null
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      public_holidays: {
+        Row: {
+          id: string
+          name: string
+          holiday_date: string
+          year: number
+          recurring: boolean
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          holiday_date: string
+          year?: number
+          recurring?: boolean
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          holiday_date?: string
+          year?: number
+          recurring?: boolean
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      annual_leave_applications: {
+        Row: {
+          id: string
+          employee_id: string
+          user_id: string
+          surname: string
+          other_names: string
+          personnel_file_no: string | null
+          nrc_number: string | null
+          department: string
+          position: string
+          grade: string | null
+          annual_salary: number | null
+          last_leave_return_date: string | null
+          last_leave_commuted_date: string | null
+          last_travel_allowance_date: string | null
+          leave_days_applied: number
+          leave_start_date: string
+          days_commuted: number
+          total_days_deducted: number
+          leave_address: string
+          resume_date: string | null
+          employee_signature: boolean
+          application_date: string
+          status: "draft" | "submitted" | "hod_recommended" | "hod_rejected" | "hr_certified" | "hr_rejected" | "approved" | "rejected" | "cancelled"
+          leave_balance_before: number | null
+          leave_balance_after: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          employee_id: string
+          user_id: string
+          surname: string
+          other_names: string
+          personnel_file_no?: string | null
+          nrc_number?: string | null
+          department: string
+          position: string
+          grade?: string | null
+          annual_salary?: number | null
+          last_leave_return_date?: string | null
+          last_leave_commuted_date?: string | null
+          last_travel_allowance_date?: string | null
+          leave_days_applied: number
+          leave_start_date: string
+          days_commuted?: number
+          total_days_deducted: number
+          leave_address: string
+          resume_date?: string | null
+          employee_signature?: boolean
+          application_date?: string
+          status?: "draft" | "submitted" | "hod_recommended" | "hod_rejected" | "hr_certified" | "hr_rejected" | "approved" | "rejected" | "cancelled"
+          leave_balance_before?: number | null
+          leave_balance_after?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          employee_id?: string
+          user_id?: string
+          surname?: string
+          other_names?: string
+          personnel_file_no?: string | null
+          nrc_number?: string | null
+          department?: string
+          position?: string
+          grade?: string | null
+          annual_salary?: number | null
+          last_leave_return_date?: string | null
+          last_leave_commuted_date?: string | null
+          last_travel_allowance_date?: string | null
+          leave_days_applied?: number
+          leave_start_date?: string
+          days_commuted?: number
+          total_days_deducted?: number
+          leave_address?: string
+          resume_date?: string | null
+          employee_signature?: boolean
+          application_date?: string
+          status?: "draft" | "submitted" | "hod_recommended" | "hod_rejected" | "hr_certified" | "hr_rejected" | "approved" | "rejected" | "cancelled"
+          leave_balance_before?: number | null
+          leave_balance_after?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "annual_leave_employee_fkey"; columns: ["employee_id"]; referencedRelation: "staff_profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "annual_leave_user_fkey"; columns: ["user_id"]; referencedRelation: "profiles"; referencedColumns: ["id"] }
+        ]
+      }
+      annual_leave_approvals: {
+        Row: {
+          id: string
+          leave_id: string
+          hod_id: string | null
+          hod_recommendation: string | null
+          hod_correctness_certified: boolean
+          hod_employment_status: "established" | "probation" | "agreement" | null
+          hod_designation: string | null
+          hod_comment: string | null
+          hod_signature: boolean
+          hod_date: string | null
+          hr_officer_id: string | null
+          hr_leave_days_brought_forward: number | null
+          hr_qualifying_service_from: string | null
+          hr_qualifying_service_to: string | null
+          hr_grade: string | null
+          hr_months_in_service: number | null
+          hr_leave_balance: number | null
+          hr_certified: boolean
+          hr_comment: string | null
+          hr_signature: boolean
+          hr_date: string | null
+          agency_head_id: string | null
+          agency_leave_granted_days: number | null
+          agency_leave_type: string | null
+          agency_resume_duty_date: string | null
+          agency_approved: boolean | null
+          agency_comment: string | null
+          agency_signature: boolean
+          agency_date: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          leave_id: string
+          hod_id?: string | null
+          hod_recommendation?: string | null
+          hod_correctness_certified?: boolean
+          hod_employment_status?: "established" | "probation" | "agreement" | null
+          hod_designation?: string | null
+          hod_comment?: string | null
+          hod_signature?: boolean
+          hod_date?: string | null
+          hr_officer_id?: string | null
+          hr_leave_days_brought_forward?: number | null
+          hr_qualifying_service_from?: string | null
+          hr_qualifying_service_to?: string | null
+          hr_grade?: string | null
+          hr_months_in_service?: number | null
+          hr_leave_balance?: number | null
+          hr_certified?: boolean
+          hr_comment?: string | null
+          hr_signature?: boolean
+          hr_date?: string | null
+          agency_head_id?: string | null
+          agency_leave_granted_days?: number | null
+          agency_leave_type?: string | null
+          agency_resume_duty_date?: string | null
+          agency_approved?: boolean | null
+          agency_comment?: string | null
+          agency_signature?: boolean
+          agency_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          leave_id?: string
+          hod_id?: string | null
+          hod_recommendation?: string | null
+          hod_correctness_certified?: boolean
+          hod_employment_status?: "established" | "probation" | "agreement" | null
+          hod_designation?: string | null
+          hod_comment?: string | null
+          hod_signature?: boolean
+          hod_date?: string | null
+          hr_officer_id?: string | null
+          hr_leave_days_brought_forward?: number | null
+          hr_qualifying_service_from?: string | null
+          hr_qualifying_service_to?: string | null
+          hr_grade?: string | null
+          hr_months_in_service?: number | null
+          hr_leave_balance?: number | null
+          hr_certified?: boolean
+          hr_comment?: string | null
+          hr_signature?: boolean
+          hr_date?: string | null
+          agency_head_id?: string | null
+          agency_leave_granted_days?: number | null
+          agency_leave_type?: string | null
+          agency_resume_duty_date?: string | null
+          agency_approved?: boolean | null
+          agency_comment?: string | null
+          agency_signature?: boolean
+          agency_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "annual_leave_approvals_leave_fkey"; columns: ["leave_id"]; referencedRelation: "annual_leave_applications"; referencedColumns: ["id"] }
+        ]
+      }
+      annual_leave_ledger: {
+        Row: {
+          id: string
+          employee_id: string
+          year: number
+          opening_balance: number
+          days_earned: number
+          days_taken: number
+          days_commuted: number
+          closing_balance: number
+          carry_forward_from_previous: number | null
+          last_updated_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          employee_id: string
+          year?: number
+          opening_balance?: number
+          days_earned?: number
+          days_taken?: number
+          days_commuted?: number
+          closing_balance?: number
+          carry_forward_from_previous?: number | null
+          last_updated_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          employee_id?: string
+          year?: number
+          opening_balance?: number
+          days_earned?: number
+          days_taken?: number
+          days_commuted?: number
+          closing_balance?: number
+          carry_forward_from_previous?: number | null
+          last_updated_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "annual_leave_ledger_employee_fkey"; columns: ["employee_id"]; referencedRelation: "staff_profiles"; referencedColumns: ["id"] }
+        ]
+      }
+      annual_leave_distribution: {
+        Row: {
+          id: string
+          leave_id: string
+          recipient_type: string
+          recipient_id: string | null
+          notification_sent: boolean
+          sent_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          leave_id: string
+          recipient_type: string
+          recipient_id?: string | null
+          notification_sent?: boolean
+          sent_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          leave_id?: string
+          recipient_type?: string
+          recipient_id?: string | null
+          notification_sent?: boolean
+          sent_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "annual_leave_distribution_leave_fkey"; columns: ["leave_id"]; referencedRelation: "annual_leave_applications"; referencedColumns: ["id"] }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -326,6 +801,10 @@ export type Database = {
       user_role: "user" | "staff" | "admin"
       news_category: "general" | "newsletter" | "announcement" | "event"
       document_category: "strategic_plan" | "annual_report" | "policy_document" | "guideline" | "research_paper" | "newsletter" | "presentation" | "other"
+      leave_type: "annual" | "sick" | "study" | "maternity" | "paternity" | "compassionate" | "unpaid"
+      leave_status: "pending" | "recommended" | "approved" | "rejected" | "cancelled"
+      annual_leave_status: "draft" | "submitted" | "hod_recommended" | "hod_rejected" | "hr_certified" | "hr_rejected" | "approved" | "rejected" | "cancelled"
+      employment_status_type: "established" | "probation" | "agreement"
     }
     CompositeTypes: {
       [_ in never]: never
