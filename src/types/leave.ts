@@ -37,6 +37,7 @@ export interface LeaveApplication {
   hod_recommendation: "recommended" | "not_recommended" | null;
   hod_comment: string | null;
   hod_date: string | null;
+  executive_director_id: string | null;
   approved_days: number | null;
   approver_id: string | null;
   approver_comment: string | null;

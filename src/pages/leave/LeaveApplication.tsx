@@ -1,13 +1,25 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import PageLayout from "@/components/layout/PageLayout";
 import { toast } from "sonner";
-import { CalendarDays, Send, AlertCircle, FileText } from "lucide-react";
+import { CalendarDays, Send, AlertCircle, FileText, Search, Users } from "lucide-react";
 import { LeaveType, LEAVE_TYPE_LABELS } from "@/types/leave";
 import { loadHolidaysFromDB, isNonWorkingDay, countWorkingDays } from "@/utils/holidays";
+import { sendLeaveNotification } from "@/utils/sendLeaveNotification";
+
+type StaffMember = {
+  id: string;
+  full_name: string;
+  email: string;
+  user_id: string | null;
+  department_id: string | null;
+  position_id: string | null;
+  departments?: { name: string } | null;
+  positions?: { title: string } | null;
+};
 
 export default function LeaveApplication() {
   const { user, loading } = useAuth();
@@ -91,11 +103,31 @@ export default function LeaveApplication() {
     },
   });
 
+  // Fetch all staff members for H.o.D and Executive Director selection
+  const { data: staffMembers = [] } = useQuery<StaffMember[]>({
+    queryKey: ["staff_members_for_approvers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("staff_profiles")
+        .select(`
+          id, full_name, email, user_id, department_id, position_id,
+          departments:department_id(name),
+          positions:position_id(title)
+        `)
+        .eq("is_active", true)
+        .order("full_name");
+      if (error) throw error;
+      return data as StaffMember[];
+    },
+  });
+
   // Form state
   const [leaveType, setLeaveType] = useState<LeaveType>("annual");
   const [startDate, setStartDate] = useState("");
   const [requestedDays, setRequestedDays] = useState<number>(1);
   const [leaveAddress, setLeaveAddress] = useState("");
+  const [hodId, setHodId] = useState("");
+  const [executiveDirectorId, setExecutiveDirectorId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // Auto-calculate end date (excludes weekends + Zambian public holidays)
@@ -162,6 +194,16 @@ export default function LeaveApplication() {
         throw new Error("You already have a leave application for overlapping dates.");
       }
 
+      if (!hodId) throw new Error("Please select a Head of Department for approval.");
+      if (!executiveDirectorId) throw new Error("Please select an Executive Director for approval.");
+
+      // Resolve user_id (profiles.id) from staff_profiles for the foreign key
+      const hodStaffProfile = staffMembers.find(s => s.id === hodId);
+      const edStaffProfile = staffMembers.find(s => s.id === executiveDirectorId);
+
+      if (!hodStaffProfile?.user_id) throw new Error("Selected H.o.D does not have a linked portal account.");
+      if (!edStaffProfile?.user_id) throw new Error("Selected Executive Director does not have a linked portal account.");
+
       const { error } = await (supabase as any).from("leave_applications").insert({
         employee_id: staffProfile.id,
         user_id: user.id,
@@ -178,9 +220,28 @@ export default function LeaveApplication() {
           : null,
         leave_balance: currentBalance,
         status: "pending",
+        hod_id: hodStaffProfile.user_id,
+        executive_director_id: edStaffProfile.user_id,
       });
 
       if (error) throw error;
+
+      // Send email notifications to H.o.D and Executive Director
+      try {
+        await sendLeaveNotification({
+          applicant_name: staffProfile.full_name,
+          leave_type: LEAVE_TYPE_LABELS[leaveType],
+          start_date: startDate,
+          end_date: endDate,
+          requested_days: requestedDays,
+          recipients: [
+            { name: hodStaffProfile.full_name, email: hodStaffProfile.email, role: "Head of Department" },
+            { name: edStaffProfile.full_name, email: edStaffProfile.email, role: "Executive Director" },
+          ],
+        });
+      } catch {
+        console.warn("Email notification could not be sent.");
+      }
     },
     onSuccess: () => {
       toast.success("Leave application submitted successfully!");
@@ -196,6 +257,14 @@ export default function LeaveApplication() {
     e.preventDefault();
     if (!startDate || requestedDays < 1) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+    if (!hodId) {
+      toast.error("Please select a Head of Department for approval");
+      return;
+    }
+    if (!executiveDirectorId) {
+      toast.error("Please select an Executive Director for approval");
       return;
     }
     setSubmitting(true);
@@ -370,6 +439,35 @@ export default function LeaveApplication() {
                 )}
               </div>
 
+              {/* Part II - Approval Routing */}
+              <div className="bg-noir-elevated border border-border rounded-sm p-6">
+                <h2 className="font-display text-lg font-bold mb-2 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Approval Routing
+                </h2>
+                <p className="text-xs text-muted-foreground mb-5">
+                  Select the H.o.D and Executive Director who will review your leave application. They will be notified by email.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <SearchableStaffSelect
+                    label="Head of Department (H.o.D) *"
+                    placeholder="Search H.o.D by name or email..."
+                    staffMembers={staffMembers}
+                    selectedId={hodId}
+                    onSelect={setHodId}
+                    excludeId={executiveDirectorId}
+                  />
+                  <SearchableStaffSelect
+                    label="Executive Director *"
+                    placeholder="Search Executive Director by name or email..."
+                    staffMembers={staffMembers}
+                    selectedId={executiveDirectorId}
+                    onSelect={setExecutiveDirectorId}
+                    excludeId={hodId}
+                  />
+                </div>
+              </div>
+
               {/* Validation warnings */}
               {leaveType === "annual" && currentBalance !== null && requestedDays > currentBalance && (
                 <div className="bg-red-50 border border-red-200 rounded-sm p-4 flex items-start gap-3">
@@ -392,7 +490,7 @@ export default function LeaveApplication() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || !startDate || requestedDays < 1}
+                  disabled={submitting || !startDate || requestedDays < 1 || !hodId || !executiveDirectorId}
                   className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all disabled:opacity-60"
                 >
                   <Send className="h-4 w-4" />
@@ -412,6 +510,109 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
     <div>
       <label className="block text-xs font-mono uppercase tracking-wider text-muted-foreground mb-1">{label}</label>
       <p className="px-4 py-2.5 bg-muted border border-border rounded-sm text-sm">{value}</p>
+    </div>
+  );
+}
+
+function SearchableStaffSelect({
+  label,
+  placeholder,
+  staffMembers,
+  selectedId,
+  onSelect,
+  excludeId,
+}: {
+  label: string;
+  placeholder: string;
+  staffMembers: StaffMember[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+  excludeId?: string;
+}) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const selectedStaff = staffMembers.find(s => s.id === selectedId);
+
+  // Filter staff: match search term and exclude the other selected approver
+  const filtered = staffMembers.filter(s => {
+    if (excludeId && s.id === excludeId) return false;
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      s.full_name.toLowerCase().includes(q) ||
+      s.email.toLowerCase().includes(q)
+    );
+  });
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          type="text"
+          className="w-full px-4 py-3 pr-10 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
+          placeholder={placeholder}
+          value={isOpen ? searchTerm : (selectedStaff ? `${selectedStaff.full_name} (${selectedStaff.email})` : "")}
+          onChange={e => {
+            setSearchTerm(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => {
+            setSearchTerm("");
+            setIsOpen(true);
+          }}
+        />
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+      </div>
+
+      {selectedStaff && !isOpen && (
+        <p className="text-xs text-muted-foreground mt-1">
+          {(selectedStaff as any).departments?.name || "No dept."} · {(selectedStaff as any).positions?.title || "No position"}
+        </p>
+      )}
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-sm shadow-lg max-h-60 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="px-4 py-4 text-sm text-muted-foreground text-center">
+              No staff members found
+            </div>
+          ) : (
+            filtered.map(staff => (
+              <div
+                key={staff.id}
+                className={`px-4 py-3 text-sm hover:bg-primary/5 cursor-pointer border-b border-border/50 last:border-0 ${
+                  staff.id === selectedId ? "bg-primary/10" : ""
+                }`}
+                onClick={() => {
+                  onSelect(staff.id);
+                  setSearchTerm("");
+                  setIsOpen(false);
+                }}
+              >
+                <div className="font-medium">{staff.full_name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {staff.email} · {(staff as any).departments?.name || "—"} · {(staff as any).positions?.title || "—"}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

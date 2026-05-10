@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
-import { Shield, Users, FileText, LogOut, Settings, Activity, ClipboardList, CalendarDays } from "lucide-react";
+import { Shield, Users, FileText, LogOut, Settings, Activity, ClipboardList, CalendarDays, UserCircle } from "lucide-react";
 
 export default function PortalDashboard() {
   const { user, loading, logout } = useAuth();
@@ -75,6 +75,7 @@ function getCards(role: string) {
   }
   if (role === "staff") {
     return [
+      { icon: UserCircle, title: "My Profile", desc: "View and complete your staff profile information.", path: "/portal/staff/profile" },
       { icon: ClipboardList, title: "Review Queue", desc: "Process pending RIA submissions assigned to you.", path: "#" },
       { icon: CalendarDays, title: "Leave Dashboard", desc: "Manage leave applications, approvals and records.", path: "/portal/staff/leave" },
       { icon: Users, title: "Stakeholders", desc: "Communicate with applicants and regulatory bodies.", path: "#" },

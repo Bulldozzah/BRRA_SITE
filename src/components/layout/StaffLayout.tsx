@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useStaffProfileCheck } from "@/hooks/useStaffProfileCheck";
 import {
   Users, LogOut, LayoutDashboard, Menu, PanelLeftClose, Bell,
   ExternalLink, ChevronRight, CalendarDays, CalendarPlus, ClipboardCheck,
-  Clock, FileText,
+  Clock, FileText, UserCircle,
 } from "lucide-react";
 
 type NavItem = {
@@ -14,8 +15,12 @@ type NavItem = {
   path?: string;
 };
 
-const navItems: NavItem[] = [
+const mainNavItems: NavItem[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/portal/staff/leave" },
+  { id: "profile", label: "My Profile", icon: UserCircle, path: "/portal/staff/profile" },
+];
+
+const leaveItems: NavItem[] = [
   { id: "my-leave", label: "My Leave", icon: CalendarDays, path: "/portal/leave" },
   { id: "apply", label: "Apply for Leave", icon: CalendarPlus, path: "/portal/leave/apply" },
   { id: "annual-apply", label: "Annual Leave (BRRA)", icon: CalendarDays, path: "/portal/leave/annual/apply" },
@@ -35,6 +40,9 @@ export default function StaffLayout({ children, activeTab = "overview" }: StaffL
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Redirect staff with incomplete profiles to the profile page
+  useStaffProfileCheck();
 
   const handleLogout = async () => {
     await logout();
@@ -73,8 +81,8 @@ export default function StaffLayout({ children, activeTab = "overview" }: StaffL
         </div>
 
         {/* Navigation */}
-        <nav className="p-3 space-y-1">
-          {navItems.map((item) => {
+        <nav className="p-3 space-y-1 overflow-y-auto" style={{ maxHeight: "calc(100vh - 140px)" }}>
+          {mainNavItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
               <Link
@@ -97,19 +105,51 @@ export default function StaffLayout({ children, activeTab = "overview" }: StaffL
               </Link>
             );
           })}
-        </nav>
 
-        {/* Back to dashboard link */}
-        <div className="px-3 mt-4">
+          {/* Leave Management section divider */}
+          {!collapsed && (
+            <div className="pt-4 pb-1 px-3">
+              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/60">Leave Management</p>
+            </div>
+          )}
+          {collapsed && <div className="border-t border-border my-2" />}
+
+          {leaveItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <Link
+                key={item.id}
+                to={item.path || "#"}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-sm transition-colors group ${
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                }`}
+                title={collapsed ? item.label : undefined}
+              >
+                <item.icon className={`h-5 w-5 flex-shrink-0 ${collapsed ? "mx-auto" : ""}`} />
+                {!collapsed && (
+                  <>
+                    <span className="text-sm font-medium flex-1">{item.label}</span>
+                    {isActive && <ChevronRight className="h-4 w-4 opacity-50" />}
+                  </>
+                )}
+              </Link>
+            );
+          })}
+
+          {/* Back to dashboard link */}
+          {!collapsed && <div className="border-t border-border my-3" />}
+          {collapsed && <div className="border-t border-border my-2" />}
           <Link
             to="/portal/dashboard"
-            className="flex items-center gap-3 px-3 py-2.5 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-sm transition-colors text-sm"
+            className="flex items-center gap-3 px-3 py-2.5 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-sm transition-colors"
             title={collapsed ? "Back to Dashboard" : undefined}
           >
             <ExternalLink className={`h-5 w-5 flex-shrink-0 ${collapsed ? "mx-auto" : ""}`} />
-            {!collapsed && <span className="font-medium">Back to Dashboard</span>}
+            {!collapsed && <span className="text-sm font-medium">Back to Dashboard</span>}
           </Link>
-        </div>
+        </nav>
 
         {/* User info at bottom */}
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border">

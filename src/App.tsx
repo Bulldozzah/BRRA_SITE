@@ -38,6 +38,7 @@ import StaffLeavePage from "./pages/staff/StaffLeavePage";
 import StaffLeaveApprovalsPage from "./pages/staff/StaffLeaveApprovalsPage";
 import StaffLeavePendingPage from "./pages/staff/StaffLeavePendingPage";
 import StaffLeaveRecordsPage from "./pages/staff/StaffLeaveRecordsPage";
+import StaffProfilePage from "./pages/staff/StaffProfilePage";
 import AnnualLeaveApplication from "./pages/leave/AnnualLeaveApplication";
 import AnnualLeaveApprovals from "./pages/leave/AnnualLeaveApprovals";
 import NotFound from "./pages/NotFound";
@@ -84,6 +85,7 @@ const App = () => (
           <Route path="/portal/leave" element={<LeaveDashboard />} />
           <Route path="/portal/leave/apply" element={<LeaveApplication />} />
           <Route path="/portal/leave/approvals" element={<LeaveApprovals />} />
+          <Route path="/portal/staff/profile" element={<StaffProfilePage />} />
           <Route path="/portal/staff/leave" element={<StaffLeavePage />} />
           <Route path="/portal/staff/leave/approvals" element={<StaffLeaveApprovalsPage />} />
           <Route path="/portal/staff/leave/pending" element={<StaffLeavePendingPage />} />
