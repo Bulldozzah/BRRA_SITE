@@ -36,7 +36,7 @@ export default function RiaDashboard() {
 
   return (
     <PageLayout>
-      <section className="py-12 container-narrow">
+      <section className="py-12 container-wide">
         <RiaContent userId={user.id} userEmail={user.email || ""} userName={user.name || ""} />
       </section>
     </PageLayout>
@@ -47,50 +47,81 @@ function RiaContent({ userId, userEmail, userName }: { userId: string; userEmail
   const [activeTab, setActiveTab] = useState<"submissions" | "submit" | "track">("submissions");
   const queryClient = useQueryClient();
 
-  const tabs = [
+  const navItems = [
     { id: "submissions" as const, label: "My Submissions", icon: FileText },
     { id: "submit" as const, label: "Submit RIA", icon: Send },
-    { id: "track" as const, label: "Track", icon: Search },
+    { id: "track" as const, label: "Track Submission", icon: Search },
   ];
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-bold mb-2">RIA Submissions</h1>
-        <p className="text-muted-foreground">Submit, manage, and track your Regulatory Impact Assessments.</p>
+    <div className="flex flex-col lg:flex-row gap-8">
+      {/* Left sidebar panel */}
+      <div className="lg:w-72 flex-shrink-0">
+        <div className="lg:sticky lg:top-24 space-y-6">
+          {/* Welcome card */}
+          <div className="bg-noir-elevated border border-border rounded-sm p-6">
+            <p className="text-xs font-mono uppercase tracking-[0.15em] text-primary mb-2">Welcome</p>
+            <h2 className="font-display text-xl font-bold mb-1">{userName || "User"}</h2>
+            <p className="text-xs text-muted-foreground">{userEmail}</p>
+          </div>
+
+          {/* RIA Navigation */}
+          <div className="bg-noir-elevated border border-border rounded-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-border">
+              <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground">RIA Functions</p>
+            </div>
+            <nav className="p-2 space-y-0.5">
+              {navItems.map(item => {
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-sm text-sm font-medium transition-colors text-left ${
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4 flex-shrink-0" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex border-b border-border">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
-              activeTab === tab.id
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-            }`}
-          >
-            <tab.icon className="h-4 w-4" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Right content area */}
+      <div className="flex-1 min-w-0">
+        <div className="mb-6">
+          <h1 className="font-display text-3xl font-bold mb-2">
+            {activeTab === "submissions" ? "My Submissions" : activeTab === "submit" ? "Submit RIA" : "Track Submission"}
+          </h1>
+          <p className="text-muted-foreground">
+            {activeTab === "submissions"
+              ? "View and monitor your Regulatory Impact Assessment submissions."
+              : activeTab === "submit"
+              ? "Submit a new Regulatory Impact Assessment for review."
+              : "Track the status of any RIA using its tracking number."}
+          </p>
+        </div>
 
-      {activeTab === "submissions" && <SubmissionsTab userId={userId} userEmail={userEmail} />}
-      {activeTab === "submit" && (
-        <SubmitTab
-          userId={userId}
-          userEmail={userEmail}
-          userName={userName}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
-            setActiveTab("submissions");
-          }}
-        />
-      )}
-      {activeTab === "track" && <TrackTab />}
+        {activeTab === "submissions" && <SubmissionsTab userId={userId} userEmail={userEmail} />}
+        {activeTab === "submit" && (
+          <SubmitTab
+            userId={userId}
+            userEmail={userEmail}
+            userName={userName}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
+              setActiveTab("submissions");
+            }}
+          />
+        )}
+        {activeTab === "track" && <TrackTab />}
+      </div>
     </div>
   );
 }
