@@ -36,6 +36,13 @@ export interface RiaSubmission {
   progress_percentage: number;
   assigned_officer_id: string | null;
   assigned_officer_name: string | null;
+  assigned_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  review_notes: string | null;
+  economic_impact: string | null;
+  social_impact: string | null;
+  environmental_impact: string | null;
   final_report_path: string | null;
   created_at: string;
   updated_at: string;
@@ -100,19 +107,19 @@ export const RIA_SECTORS = [
 ] as const;
 
 export const RIA_STAGES = [
-  { number: 1, name: "Submission Received" },
-  { number: 2, name: "Officer Assigned" },
-  { number: 3, name: "Initial Review" },
-  { number: 4, name: "Stakeholder Identification" },
-  { number: 5, name: "Economic Impact Analysis" },
-  { number: 6, name: "Social Impact Analysis" },
-  { number: 7, name: "Environmental Impact Analysis" },
-  { number: 8, name: "Mid-point Review" },
-  { number: 9, name: "Report Drafting" },
-  { number: 10, name: "Internal Feedback" },
-  { number: 11, name: "Final Report" },
-  { number: 12, name: "Manager Review" },
-  { number: 13, name: "Executive Approval" },
-  { number: 14, name: "Communication" },
-  { number: 15, name: "Completed & Archived" },
+  { number: 1, name: "Submission Received", progress: 7 },
+  { number: 2, name: "Officer Assigned", progress: 13 },
+  { number: 3, name: "Initial Review", progress: 20 },
+  { number: 4, name: "Stakeholder Identification", progress: 27 },
+  { number: 5, name: "Economic Impact Analysis", progress: 33 },
+  { number: 6, name: "Social Impact Analysis", progress: 40 },
+  { number: 7, name: "Environmental Impact Analysis", progress: 47 },
+  { number: 8, name: "Mid-point Review", progress: 53 },
+  { number: 9, name: "Report Drafting", progress: 60 },
+  { number: 10, name: "Internal Feedback", progress: 67 },
+  { number: 11, name: "Final Report", progress: 73 },
+  { number: 12, name: "Manager Review", progress: 80 },
+  { number: 13, name: "Executive Approval", progress: 87 },
+  { number: 14, name: "Communication", progress: 93 },
+  { number: 15, name: "Completed & Archived", progress: 100 },
 ] as const;
