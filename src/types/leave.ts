@@ -173,6 +173,17 @@ export interface AnnualLeaveApplication {
   status: AnnualLeaveStatus;
   leave_balance_before: number | null;
   leave_balance_after: number | null;
+  // Approver selection
+  hod_approver_id: string | null;
+  hod_approver_name: string | null;
+  hod_approver_email: string | null;
+  hr_approver_id: string | null;
+  hr_approver_name: string | null;
+  hr_approver_email: string | null;
+  ed_approver_id: string | null;
+  ed_approver_name: string | null;
+  ed_approver_email: string | null;
+  applicant_email: string | null;
   created_at: string;
   updated_at: string;
   // Joined

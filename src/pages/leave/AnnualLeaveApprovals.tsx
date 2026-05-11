@@ -17,6 +17,7 @@ import {
   EMPLOYMENT_STATUS_LABELS,
   EmploymentStatusType,
 } from "@/types/leave";
+import { sendLeaveNotification } from "@/utils/sendLeaveNotification";
 
 type ApprovalStage = "hod" | "hr" | "agency";
 
@@ -121,6 +122,35 @@ export default function AnnualLeaveApprovals() {
         .update({ status: newStatus, updated_at: new Date().toISOString() })
         .eq("id", leaveId);
       if (updateErr) throw updateErr;
+
+      // Send email notifications
+      const app = applications.find((a: any) => a.id === leaveId);
+      if (app) {
+        const emailBase = {
+          applicant_name: `${app.surname}, ${app.other_names}`,
+          leave_type: "Annual Leave",
+          start_date: app.leave_start_date,
+          end_date: app.resume_date || app.leave_start_date,
+          requested_days: app.leave_days_applied,
+        };
+        try {
+          if (recommendation === "recommended") {
+            // Notify applicant
+            if (app.applicant_email) {
+              await sendLeaveNotification({ ...emailBase, notification_type: "hod_recommended", reviewer_comment: comment, recipients: [{ name: `${app.surname}, ${app.other_names}`, email: app.applicant_email, role: "Applicant" }] });
+            }
+            // Notify HR officer
+            if (app.hr_approver_email) {
+              await sendLeaveNotification({ ...emailBase, notification_type: "submitted_approver", recipients: [{ name: app.hr_approver_name || "HR Officer", email: app.hr_approver_email, role: "HR Officer" }] });
+            }
+          } else {
+            // Notify applicant: not recommended
+            if (app.applicant_email) {
+              await sendLeaveNotification({ ...emailBase, notification_type: "hod_not_recommended", reviewer_comment: comment, recipients: [{ name: `${app.surname}, ${app.other_names}`, email: app.applicant_email, role: "Applicant" }] });
+            }
+          }
+        } catch { console.warn("Email notification could not be sent."); }
+      }
     },
     onSuccess: () => {
       toast.success("HoD recommendation submitted");
@@ -173,6 +203,35 @@ export default function AnnualLeaveApprovals() {
         .update({ status: newStatus, updated_at: new Date().toISOString() })
         .eq("id", leaveId);
       if (updateErr) throw updateErr;
+
+      // Send email notifications
+      const app = applications.find((a: any) => a.id === leaveId);
+      if (app) {
+        const emailBase = {
+          applicant_name: `${app.surname}, ${app.other_names}`,
+          leave_type: "Annual Leave",
+          start_date: app.leave_start_date,
+          end_date: app.resume_date || app.leave_start_date,
+          requested_days: app.leave_days_applied,
+        };
+        try {
+          if (certified) {
+            // Notify applicant: HR certified, awaiting ED
+            if (app.applicant_email) {
+              await sendLeaveNotification({ ...emailBase, notification_type: "hod_recommended", reviewer_comment: comment, recipients: [{ name: `${app.surname}, ${app.other_names}`, email: app.applicant_email, role: "Applicant" }] });
+            }
+            // Notify Executive Director
+            if (app.ed_approver_email) {
+              await sendLeaveNotification({ ...emailBase, notification_type: "hod_recommended_ed", recipients: [{ name: app.ed_approver_name || "Executive Director", email: app.ed_approver_email, role: "Executive Director" }] });
+            }
+          } else {
+            // Notify applicant: HR rejected
+            if (app.applicant_email) {
+              await sendLeaveNotification({ ...emailBase, notification_type: "rejected", reviewer_comment: comment, recipients: [{ name: `${app.surname}, ${app.other_names}`, email: app.applicant_email, role: "Applicant" }] });
+            }
+          }
+        } catch { console.warn("Email notification could not be sent."); }
+      }
     },
     onSuccess: () => {
       toast.success("HR certification submitted");
@@ -217,6 +276,28 @@ export default function AnnualLeaveApprovals() {
         .update({ status: newStatus, updated_at: new Date().toISOString() })
         .eq("id", leaveId);
       if (updateErr) throw updateErr;
+
+      // Send email notifications
+      const app = applications.find((a: any) => a.id === leaveId);
+      if (app) {
+        const emailBase = {
+          applicant_name: `${app.surname}, ${app.other_names}`,
+          leave_type: "Annual Leave",
+          start_date: app.leave_start_date,
+          end_date: app.resume_date || app.leave_start_date,
+          requested_days: app.leave_days_applied,
+        };
+        try {
+          if (app.applicant_email) {
+            await sendLeaveNotification({
+              ...emailBase,
+              notification_type: approved ? "approved" : "rejected",
+              reviewer_comment: comment,
+              recipients: [{ name: `${app.surname}, ${app.other_names}`, email: app.applicant_email, role: "Applicant" }],
+            });
+          }
+        } catch { console.warn("Email notification could not be sent."); }
+      }
     },
     onSuccess: () => {
       toast.success("Final decision submitted");
@@ -328,10 +409,10 @@ function AnnualLeaveCard({
     }
   };
 
-  // Determine if user can act
-  const canHodAct = (userRole === "staff" || userRole === "admin") && status === "submitted";
-  const canHrAct = (userRole === "staff" || userRole === "admin") && status === "hod_recommended";
-  const canAgencyAct = userRole === "admin" && status === "hr_certified";
+  // Determine if user can act (restricted to selected approvers)
+  const canHodAct = (application.hod_approver_id === userId || userRole === "admin") && status === "submitted";
+  const canHrAct = (application.hr_approver_id === userId || userRole === "admin") && status === "hod_recommended";
+  const canAgencyAct = (application.ed_approver_id === userId || userRole === "admin") && status === "hr_certified";
 
   return (
     <div className="bg-noir-elevated border border-border rounded-sm overflow-hidden">

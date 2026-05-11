@@ -1,17 +1,29 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import PageLayout from "@/components/layout/PageLayout";
 import { toast } from "sonner";
-import { CalendarDays, Send, AlertCircle, FileText, Calculator } from "lucide-react";
+import { CalendarDays, Send, AlertCircle, FileText, Calculator, Search, Users } from "lucide-react";
 import { loadHolidaysFromDB, isNonWorkingDay } from "@/utils/holidays";
+import { sendLeaveNotification } from "@/utils/sendLeaveNotification";
 import {
   AnnualLeaveStatus,
   ANNUAL_LEAVE_STATUS_LABELS,
   ANNUAL_LEAVE_STATUS_COLORS,
 } from "@/types/leave";
+
+type StaffMember = {
+  id: string;
+  full_name: string;
+  email: string;
+  user_id: string | null;
+  department_id: string | null;
+  position_id: string | null;
+  departments?: { name: string } | null;
+  positions?: { title: string } | null;
+};
 
 export default function AnnualLeaveApplication() {
   const { user, loading } = useAuth();
@@ -85,6 +97,35 @@ export default function AnnualLeaveApplication() {
     },
   });
 
+  // Fetch staff members for approver selection
+  const { data: staffMembers = [] } = useQuery({
+    queryKey: ["staff_members_annual"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("staff_profiles")
+        .select(`
+          id, full_name, email, user_id, department_id, position_id,
+          departments:department_id(name),
+          positions:position_id(title)
+        `)
+        .not("user_id", "is", null)
+        .order("full_name");
+      if (error) throw error;
+      return (data || []) as StaffMember[];
+    },
+  });
+
+  // Approver selection state
+  const [hodId, setHodId] = useState("");
+  const [hrId, setHrId] = useState("");
+  const [executiveDirectorId, setExecutiveDirectorId] = useState("");
+  const [hodSearch, setHodSearch] = useState("");
+  const [hrSearch, setHrSearch] = useState("");
+  const [edSearch, setEdSearch] = useState("");
+  const [hodOpen, setHodOpen] = useState(false);
+  const [hrOpen, setHrOpen] = useState(false);
+  const [edOpen, setEdOpen] = useState(false);
+
   // Form state - Part A
   const [leaveDaysApplied, setLeaveDaysApplied] = useState<number>(1);
   const [daysCommuted, setDaysCommuted] = useState<number>(0);
@@ -138,6 +179,18 @@ export default function AnnualLeaveApplication() {
       if (!signature) throw new Error("You must sign the application.");
       if (!startDate) throw new Error("Start date is required.");
       if (!leaveAddress.trim()) throw new Error("Leave address is required.");
+      if (!hodId) throw new Error("Please select a Head of Department for approval.");
+      if (!hrId) throw new Error("Please select an HR Officer for certification.");
+      if (!executiveDirectorId) throw new Error("Please select an Executive Director for final approval.");
+
+      // Resolve approver profiles
+      const hodStaff = staffMembers.find(s => s.id === hodId);
+      const hrStaff = staffMembers.find(s => s.id === hrId);
+      const edStaff = staffMembers.find(s => s.id === executiveDirectorId);
+
+      if (!hodStaff?.user_id) throw new Error("Selected H.o.D does not have a linked portal account.");
+      if (!hrStaff?.user_id) throw new Error("Selected HR Officer does not have a linked portal account.");
+      if (!edStaff?.user_id) throw new Error("Selected Executive Director does not have a linked portal account.");
 
       // Business rule: sufficient balance
       if (currentBalance !== null && totalDaysDeducted > currentBalance) {
@@ -161,7 +214,7 @@ export default function AnnualLeaveApplication() {
         throw new Error("You already have an overlapping annual leave application.");
       }
 
-      // Insert the application
+      // Insert the application with approver details
       const { error } = await (supabase as any).from("annual_leave_applications").insert({
         employee_id: staffProfile.id,
         user_id: user.id,
@@ -186,9 +239,47 @@ export default function AnnualLeaveApplication() {
         status: "submitted",
         leave_balance_before: currentBalance,
         leave_balance_after: balanceAfter,
+        hod_approver_id: hodStaff.user_id,
+        hod_approver_name: hodStaff.full_name,
+        hod_approver_email: hodStaff.email,
+        hr_approver_id: hrStaff.user_id,
+        hr_approver_name: hrStaff.full_name,
+        hr_approver_email: hrStaff.email,
+        ed_approver_id: edStaff.user_id,
+        ed_approver_name: edStaff.full_name,
+        ed_approver_email: edStaff.email,
+        applicant_email: (staffProfile as any).email || null,
       });
 
       if (error) throw error;
+
+      // Send email notifications
+      const emailBase = {
+        applicant_name: staffProfile.full_name,
+        leave_type: "Annual Leave",
+        start_date: startDate,
+        end_date: resumeDate || startDate,
+        requested_days: leaveDaysApplied,
+      };
+
+      try {
+        // Notify applicant
+        if ((staffProfile as any).email) {
+          await sendLeaveNotification({
+            ...emailBase,
+            notification_type: "submitted",
+            recipients: [{ name: staffProfile.full_name, email: (staffProfile as any).email, role: "Applicant" }],
+          });
+        }
+        // Notify H.o.D only (HR and ED notified at later stages)
+        await sendLeaveNotification({
+          ...emailBase,
+          notification_type: "submitted_approver",
+          recipients: [{ name: hodStaff.full_name, email: hodStaff.email, role: "Head of Department" }],
+        });
+      } catch {
+        console.warn("Email notification could not be sent.");
+      }
     },
     onSuccess: () => {
       toast.success("Annual leave application submitted successfully!");
@@ -421,6 +512,123 @@ export default function AnnualLeaveApplication() {
                 </div>
               )}
 
+              {/* Approver Selection */}
+              <div className="bg-noir-elevated border border-border rounded-sm p-6">
+                <h2 className="font-display text-lg font-bold mb-1 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Approval Routing
+                </h2>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Select the approvers for this application. The form will be routed: H.o.D → HR Officer → Executive Director.
+                </p>
+                <div className="grid sm:grid-cols-3 gap-4">
+                  {/* H.o.D Selection */}
+                  <div className="relative">
+                    <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">Head of Department *</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <input
+                        type="text"
+                        value={hodSearch}
+                        onChange={(e) => { setHodSearch(e.target.value); setHodOpen(true); }}
+                        onFocus={() => setHodOpen(true)}
+                        placeholder={hodId ? staffMembers.find(s => s.id === hodId)?.full_name : "Search staff..."}
+                        className="w-full pl-9 pr-4 py-2.5 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    {hodOpen && (
+                      <div className="absolute z-20 mt-1 w-full max-h-40 overflow-y-auto bg-background border border-border rounded-sm shadow-lg">
+                        {staffMembers
+                          .filter(s => s.full_name.toLowerCase().includes(hodSearch.toLowerCase()))
+                          .slice(0, 8)
+                          .map(s => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => { setHodId(s.id); setHodSearch(s.full_name); setHodOpen(false); }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
+                            >
+                              <span className="font-medium">{s.full_name}</span>
+                              <span className="text-xs text-muted-foreground ml-2">{s.positions?.title || ""}</span>
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                    {hodId && <p className="text-xs text-green-600 mt-1">✓ {staffMembers.find(s => s.id === hodId)?.full_name}</p>}
+                  </div>
+
+                  {/* HR Officer Selection */}
+                  <div className="relative">
+                    <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">HR Officer *</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <input
+                        type="text"
+                        value={hrSearch}
+                        onChange={(e) => { setHrSearch(e.target.value); setHrOpen(true); }}
+                        onFocus={() => setHrOpen(true)}
+                        placeholder={hrId ? staffMembers.find(s => s.id === hrId)?.full_name : "Search staff..."}
+                        className="w-full pl-9 pr-4 py-2.5 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    {hrOpen && (
+                      <div className="absolute z-20 mt-1 w-full max-h-40 overflow-y-auto bg-background border border-border rounded-sm shadow-lg">
+                        {staffMembers
+                          .filter(s => s.full_name.toLowerCase().includes(hrSearch.toLowerCase()))
+                          .slice(0, 8)
+                          .map(s => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => { setHrId(s.id); setHrSearch(s.full_name); setHrOpen(false); }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
+                            >
+                              <span className="font-medium">{s.full_name}</span>
+                              <span className="text-xs text-muted-foreground ml-2">{s.positions?.title || ""}</span>
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                    {hrId && <p className="text-xs text-green-600 mt-1">✓ {staffMembers.find(s => s.id === hrId)?.full_name}</p>}
+                  </div>
+
+                  {/* Executive Director Selection */}
+                  <div className="relative">
+                    <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">Executive Director *</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <input
+                        type="text"
+                        value={edSearch}
+                        onChange={(e) => { setEdSearch(e.target.value); setEdOpen(true); }}
+                        onFocus={() => setEdOpen(true)}
+                        placeholder={executiveDirectorId ? staffMembers.find(s => s.id === executiveDirectorId)?.full_name : "Search staff..."}
+                        className="w-full pl-9 pr-4 py-2.5 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    {edOpen && (
+                      <div className="absolute z-20 mt-1 w-full max-h-40 overflow-y-auto bg-background border border-border rounded-sm shadow-lg">
+                        {staffMembers
+                          .filter(s => s.full_name.toLowerCase().includes(edSearch.toLowerCase()))
+                          .slice(0, 8)
+                          .map(s => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => { setExecutiveDirectorId(s.id); setEdSearch(s.full_name); setEdOpen(false); }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors"
+                            >
+                              <span className="font-medium">{s.full_name}</span>
+                              <span className="text-xs text-muted-foreground ml-2">{s.positions?.title || ""}</span>
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                    {executiveDirectorId && <p className="text-xs text-green-600 mt-1">✓ {staffMembers.find(s => s.id === executiveDirectorId)?.full_name}</p>}
+                  </div>
+                </div>
+              </div>
+
               {/* Employee Signature */}
               <div className="bg-noir-elevated border border-border rounded-sm p-6">
                 <h2 className="font-display text-lg font-bold mb-4">Employee Declaration & Signature</h2>
@@ -453,7 +661,7 @@ export default function AnnualLeaveApplication() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || !startDate || !signature || !leaveAddress.trim()}
+                  disabled={submitting || !startDate || !signature || !leaveAddress.trim() || !hodId || !hrId || !executiveDirectorId}
                   className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all disabled:opacity-60"
                 >
                   <Send className="h-4 w-4" />
