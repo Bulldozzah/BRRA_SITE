@@ -30,6 +30,10 @@ const leaveItems: NavItem[] = [
   { id: "records", label: "Leave Records", icon: FileText, path: "/portal/staff/leave/records" },
 ];
 
+const riaItems: NavItem[] = [
+  { id: "ria", label: "RIA Submissions", icon: FileText, path: "/portal/staff/ria" },
+];
+
 interface StaffLayoutProps {
   children: React.ReactNode;
   activeTab?: string;
@@ -115,6 +119,38 @@ export default function StaffLayout({ children, activeTab = "overview" }: StaffL
           {collapsed && <div className="border-t border-border my-2" />}
 
           {leaveItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <Link
+                key={item.id}
+                to={item.path || "#"}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-sm transition-colors group ${
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                }`}
+                title={collapsed ? item.label : undefined}
+              >
+                <item.icon className={`h-5 w-5 flex-shrink-0 ${collapsed ? "mx-auto" : ""}`} />
+                {!collapsed && (
+                  <>
+                    <span className="text-sm font-medium flex-1">{item.label}</span>
+                    {isActive && <ChevronRight className="h-4 w-4 opacity-50" />}
+                  </>
+                )}
+              </Link>
+            );
+          })}
+
+          {/* RIA Management section divider */}
+          {!collapsed && (
+            <div className="pt-4 pb-1 px-3">
+              <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/60">RIA Management</p>
+            </div>
+          )}
+          {collapsed && <div className="border-t border-border my-2" />}
+
+          {riaItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
               <Link

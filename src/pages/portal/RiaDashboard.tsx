@@ -1,0 +1,687 @@
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import PageLayout from "@/components/layout/PageLayout";
+import { toast } from "sonner";
+import {
+  Send, FileText, Search, Upload, CheckCircle2, Clock, Circle,
+  XCircle, AlertCircle, Eye, ChevronDown, ChevronUp,
+} from "lucide-react";
+import {
+  RiaSubmission,
+  RiaStageHistory,
+  RIA_ORGANIZATION_TYPE_LABELS,
+  RIA_REGULATION_TYPE_LABELS,
+  RIA_STATUS_LABELS,
+  RIA_STATUS_COLORS,
+  RIA_SECTORS,
+  RIA_STAGES,
+  RiaOrganizationType,
+  RiaRegulationType,
+  RiaStatus,
+} from "@/types/ria";
+
+export default function RiaDashboard() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) navigate("/portal/login");
+  }, [user, loading, navigate]);
+
+  if (loading || !user) return null;
+
+  return (
+    <PageLayout>
+      <section className="py-12 container-narrow">
+        <RiaContent userId={user.id} userEmail={user.email || ""} userName={user.name || ""} />
+      </section>
+    </PageLayout>
+  );
+}
+
+function RiaContent({ userId, userEmail, userName }: { userId: string; userEmail: string; userName: string }) {
+  const [activeTab, setActiveTab] = useState<"submissions" | "submit" | "track">("submissions");
+  const queryClient = useQueryClient();
+
+  const tabs = [
+    { id: "submissions" as const, label: "My Submissions", icon: FileText },
+    { id: "submit" as const, label: "Submit RIA", icon: Send },
+    { id: "track" as const, label: "Track", icon: Search },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="font-display text-3xl font-bold mb-2">RIA Submissions</h1>
+        <p className="text-muted-foreground">Submit, manage, and track your Regulatory Impact Assessments.</p>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex border-b border-border">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+              activeTab === tab.id
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+            }`}
+          >
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "submissions" && <SubmissionsTab userId={userId} userEmail={userEmail} />}
+      {activeTab === "submit" && (
+        <SubmitTab
+          userId={userId}
+          userEmail={userEmail}
+          userName={userName}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
+            setActiveTab("submissions");
+          }}
+        />
+      )}
+      {activeTab === "track" && <TrackTab />}
+    </div>
+  );
+}
+
+// =============================================================================
+// My Submissions Tab
+// =============================================================================
+function SubmissionsTab({ userId, userEmail }: { userId: string; userEmail: string }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const { data: submissions = [], isLoading } = useQuery({
+    queryKey: ["my_ria_submissions"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("ria_submissions")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as RiaSubmission[];
+    },
+  });
+
+  if (isLoading) {
+    return <p className="text-center text-muted-foreground py-12">Loading submissions…</p>;
+  }
+
+  if (submissions.length === 0) {
+    return (
+      <div className="text-center py-16 bg-noir-elevated border border-border rounded-sm">
+        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="font-display text-xl font-bold mb-2">No submissions yet</h3>
+        <p className="text-muted-foreground">Submit your first Regulatory Impact Assessment to get started.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {submissions.map(sub => (
+        <SubmissionCard
+          key={sub.id}
+          submission={sub}
+          expanded={expandedId === sub.id}
+          onToggle={() => setExpandedId(expandedId === sub.id ? null : sub.id)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function SubmissionCard({ submission, expanded, onToggle }: {
+  submission: RiaSubmission;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const [stageHistory, setStageHistory] = useState<RiaStageHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const loadHistory = async () => {
+    if (stageHistory.length > 0) return;
+    setLoadingHistory(true);
+    const { data } = await (supabase as any)
+      .from("ria_stage_history")
+      .select("*")
+      .eq("submission_id", submission.id)
+      .order("created_at", { ascending: true });
+    setStageHistory(data || []);
+    setLoadingHistory(false);
+  };
+
+  const handleToggle = () => {
+    if (!expanded) loadHistory();
+    onToggle();
+  };
+
+  return (
+    <div className="bg-noir-elevated border border-border rounded-sm overflow-hidden">
+      <button
+        onClick={handleToggle}
+        className="w-full px-6 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors text-left"
+      >
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-1">
+              <span className="font-mono text-xs text-primary">{submission.tracking_number}</span>
+              <span className={`inline-block px-2 py-0.5 text-[10px] font-mono rounded border ${RIA_STATUS_COLORS[submission.status]}`}>
+                {RIA_STATUS_LABELS[submission.status]}
+              </span>
+            </div>
+            <p className="font-medium text-sm truncate">{submission.title}</p>
+            <p className="text-xs text-muted-foreground">{submission.organization} · {submission.sector}</p>
+          </div>
+          <div className="text-right hidden sm:block">
+            <p className="text-xs text-muted-foreground">Stage {submission.current_stage}/15</p>
+            <div className="w-24 h-1.5 bg-muted rounded-full mt-1">
+              <div
+                className="h-full bg-primary rounded-full transition-all"
+                style={{ width: `${submission.progress_percentage}%` }}
+              />
+            </div>
+          </div>
+        </div>
+        {expanded ? <ChevronUp className="h-4 w-4 ml-3" /> : <ChevronDown className="h-4 w-4 ml-3" />}
+      </button>
+
+      {expanded && (
+        <div className="px-6 pb-6 border-t border-border pt-4">
+          <div className="grid sm:grid-cols-2 gap-4 mb-6 text-sm">
+            <div><span className="text-muted-foreground">Regulation Type:</span> <span className="font-medium ml-1">{RIA_REGULATION_TYPE_LABELS[submission.regulation_type]}</span></div>
+            <div><span className="text-muted-foreground">Submitted:</span> <span className="font-medium ml-1">{formatDate(submission.created_at)}</span></div>
+            <div><span className="text-muted-foreground">Current Stage:</span> <span className="font-medium ml-1">{submission.stage_name}</span></div>
+            {submission.assigned_officer_name && (
+              <div><span className="text-muted-foreground">Assigned Officer:</span> <span className="font-medium ml-1">{submission.assigned_officer_name}</span></div>
+            )}
+          </div>
+
+          {/* Timeline */}
+          <h4 className="text-xs font-mono uppercase tracking-wider text-primary mb-3">Progress Timeline</h4>
+          {loadingHistory ? (
+            <p className="text-sm text-muted-foreground">Loading timeline…</p>
+          ) : (
+            <div className="space-y-0">
+              {RIA_STAGES.map((stage) => {
+                const isCompleted = submission.current_stage > stage.number;
+                const isCurrent = submission.current_stage === stage.number;
+                const historyEntry = stageHistory.find(h => h.stage_number === stage.number);
+
+                return (
+                  <div key={stage.number} className="flex items-start gap-3 py-2">
+                    <div className="flex flex-col items-center">
+                      {isCompleted ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      ) : isCurrent ? (
+                        <Clock className="h-4 w-4 text-primary animate-pulse" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-muted-foreground/40" />
+                      )}
+                    </div>
+                    <div className={`flex-1 ${!isCompleted && !isCurrent ? "opacity-50" : ""}`}>
+                      <p className={`text-xs font-medium ${isCurrent ? "text-primary" : ""}`}>
+                        {stage.name}
+                        {isCurrent && <span className="ml-2 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">Current</span>}
+                      </p>
+                      {historyEntry?.notes && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{historyEntry.notes}</p>
+                      )}
+                      {historyEntry && (
+                        <p className="text-[10px] text-muted-foreground/70">{formatDate(historyEntry.created_at)}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// Submit RIA Tab
+// =============================================================================
+function SubmitTab({ userId, userEmail, userName, onSuccess }: {
+  userId: string; userEmail: string; userName: string; onSuccess: () => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [documentPath, setDocumentPath] = useState("");
+  const [documentFilename, setDocumentFilename] = useState("");
+
+  const [formData, setFormData] = useState({
+    submitter_name: userName,
+    submitter_email: userEmail,
+    submitter_phone: "",
+    organization: "",
+    organization_type: "other" as RiaOrganizationType,
+    title: "",
+    description: "",
+    sector: RIA_SECTORS[0],
+    regulation_type: "new_regulation" as RiaRegulationType,
+  });
+
+  const generateTrackingNumber = () => {
+    const year = new Date().getFullYear();
+    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    return `RIA-${year}-${randomNum}`;
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only PDF, DOC, and DOCX files are allowed.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be under 10MB.");
+      return;
+    }
+
+    setSelectedFile(file);
+    setUploading(true);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const trackNum = generateTrackingNumber();
+      const filePath = `${userId}/${trackNum}.${fileExt}`;
+
+      const { error } = await supabase.storage
+        .from("ria-documents")
+        .upload(filePath, file, { upsert: true });
+
+      if (error) throw error;
+
+      setDocumentPath(filePath);
+      setDocumentFilename(file.name);
+      toast.success("Document uploaded successfully.");
+    } catch (err: any) {
+      toast.error("Upload failed: " + (err.message || "Unknown error"));
+      setSelectedFile(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.submitter_name || !formData.submitter_email || !formData.organization || !formData.title || !formData.description) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const trackingNumber = generateTrackingNumber();
+
+      // Insert submission
+      const { data, error } = await (supabase as any)
+        .from("ria_submissions")
+        .insert({
+          tracking_number: trackingNumber,
+          user_id: userId,
+          submitter_name: formData.submitter_name,
+          submitter_email: formData.submitter_email,
+          submitter_phone: formData.submitter_phone || null,
+          organization: formData.organization,
+          organization_type: formData.organization_type,
+          title: formData.title,
+          description: formData.description,
+          sector: formData.sector,
+          regulation_type: formData.regulation_type,
+          document_filename: documentFilename || null,
+          document_path: documentPath || null,
+          status: "submitted",
+          current_stage: 1,
+          stage_name: "Submission Received",
+          progress_percentage: 7,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Insert initial stage history
+      await (supabase as any)
+        .from("ria_stage_history")
+        .insert({
+          submission_id: data.id,
+          stage_number: 1,
+          stage_name: "Submission Received",
+          notes: "RIA submission received and logged in the system.",
+        });
+
+      toast.success(`Submission successful! Tracking number: ${trackingNumber}`);
+
+      // Reset form
+      setFormData({
+        submitter_name: userName,
+        submitter_email: userEmail,
+        submitter_phone: "",
+        organization: "",
+        organization_type: "other",
+        title: "",
+        description: "",
+        sector: RIA_SECTORS[0],
+        regulation_type: "new_regulation",
+      });
+      setSelectedFile(null);
+      setDocumentPath("");
+      setDocumentFilename("");
+      onSuccess();
+    } catch (err: any) {
+      toast.error(err.message || "Submission failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const update = (field: string, value: string) => setFormData(prev => ({ ...prev, [field]: value }));
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Contact Information */}
+      <div className="bg-noir-elevated border border-border rounded-sm p-6">
+        <h3 className="font-display text-lg font-bold mb-4">Contact Information</h3>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <FormField label="Full Name" required value={formData.submitter_name} onChange={v => update("submitter_name", v)} />
+          <FormField label="Email Address" required type="email" value={formData.submitter_email} onChange={v => update("submitter_email", v)} />
+          <FormField label="Phone Number" value={formData.submitter_phone} onChange={v => update("submitter_phone", v)} />
+          <FormField label="Organization" required value={formData.organization} onChange={v => update("organization", v)} />
+          <div>
+            <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+              Organization Type <span className="text-destructive">*</span>
+            </label>
+            <select
+              value={formData.organization_type}
+              onChange={e => update("organization_type", e.target.value)}
+              className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
+              required
+            >
+              {Object.entries(RIA_ORGANIZATION_TYPE_LABELS).map(([val, label]) => (
+                <option key={val} value={val}>{label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Regulation Details */}
+      <div className="bg-noir-elevated border border-border rounded-sm p-6">
+        <h3 className="font-display text-lg font-bold mb-4">Regulation Details</h3>
+        <div className="space-y-4">
+          <FormField label="Title of Proposed Regulation" required value={formData.title} onChange={v => update("title", v)} />
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+                Sector <span className="text-destructive">*</span>
+              </label>
+              <select
+                value={formData.sector}
+                onChange={e => update("sector", e.target.value)}
+                className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
+                required
+              >
+                {RIA_SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+                Regulation Type <span className="text-destructive">*</span>
+              </label>
+              <select
+                value={formData.regulation_type}
+                onChange={e => update("regulation_type", e.target.value)}
+                className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
+                required
+              >
+                {Object.entries(RIA_REGULATION_TYPE_LABELS).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+              Description / Rationale <span className="text-destructive">*</span>
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={e => update("description", e.target.value)}
+              rows={5}
+              className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary resize-none"
+              placeholder="Provide a summary of the proposed regulation and its intended purpose..."
+              required
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Document Upload */}
+      <div className="bg-noir-elevated border border-border rounded-sm p-6">
+        <h3 className="font-display text-lg font-bold mb-4">Supporting Document</h3>
+        <p className="text-xs text-muted-foreground mb-4">Upload a supporting document (PDF, DOC, DOCX — max 10MB)</p>
+        {selectedFile ? (
+          <div className="flex items-center gap-3 p-3 bg-muted/50 border border-border rounded-sm">
+            <FileText className="h-5 w-5 text-primary" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+              <p className="text-xs text-muted-foreground">{formatFileSize(selectedFile.size)}</p>
+            </div>
+            <button type="button" onClick={() => { setSelectedFile(null); setDocumentPath(""); setDocumentFilename(""); }} className="text-xs text-destructive hover:underline">Remove</button>
+          </div>
+        ) : (
+          <label className="block border-2 border-dashed border-border rounded-sm p-8 text-center hover:border-primary transition-colors cursor-pointer">
+            <Upload className="h-8 w-8 text-primary mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">Click to select or drop a file here</p>
+            <input type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleFileChange} disabled={uploading} />
+          </label>
+        )}
+        {uploading && <p className="text-xs text-primary mt-2 animate-pulse">Uploading…</p>}
+      </div>
+
+      {/* Submit */}
+      <button
+        type="submit"
+        disabled={submitting || uploading}
+        className="w-full px-6 py-4 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+      >
+        <Send className="h-4 w-4" />
+        {submitting ? "Submitting…" : "Submit RIA"}
+      </button>
+    </form>
+  );
+}
+
+// =============================================================================
+// Track Tab
+// =============================================================================
+function TrackTab() {
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [result, setResult] = useState<RiaSubmission | null>(null);
+  const [stageHistory, setStageHistory] = useState<RiaStageHistory[]>([]);
+  const [notFound, setNotFound] = useState(false);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trackingNumber.trim()) return;
+
+    setSearching(true);
+    setNotFound(false);
+    setResult(null);
+
+    try {
+      const { data, error } = await (supabase as any)
+        .from("ria_submissions")
+        .select("*")
+        .eq("tracking_number", trackingNumber.trim().toUpperCase())
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) { setNotFound(true); return; }
+
+      setResult(data);
+
+      // Fetch stage history
+      const { data: history } = await (supabase as any)
+        .from("ria_stage_history")
+        .select("*")
+        .eq("submission_id", data.id)
+        .order("created_at", { ascending: true });
+      setStageHistory(history || []);
+    } catch {
+      toast.error("Error searching. Please try again.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <form onSubmit={handleSearch} className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            value={trackingNumber}
+            onChange={e => setTrackingNumber(e.target.value)}
+            placeholder="Enter tracking number (e.g. RIA-2026-12345)"
+            className="w-full pl-12 pr-4 py-3 bg-noir-elevated border border-border rounded-sm text-sm font-mono uppercase focus:outline-none focus:border-primary"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={searching || !trackingNumber.trim()}
+          className="px-6 py-3 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all disabled:opacity-60"
+        >
+          {searching ? "…" : "Track"}
+        </button>
+      </form>
+
+      {notFound && (
+        <div className="text-center py-8 bg-noir-elevated border border-border rounded-sm">
+          <XCircle className="h-8 w-8 text-destructive mx-auto mb-3" />
+          <p className="text-muted-foreground">No submission found with that tracking number.</p>
+        </div>
+      )}
+
+      {result && (
+        <div className="bg-noir-elevated border border-border rounded-sm p-6">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Reference</p>
+              <p className="font-mono text-lg text-gradient-gold font-bold">{result.tracking_number}</p>
+            </div>
+            <span className={`inline-block px-3 py-1 text-xs font-mono rounded border ${RIA_STATUS_COLORS[result.status]}`}>
+              {RIA_STATUS_LABELS[result.status]}
+            </span>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3 text-sm mb-6">
+            <div><span className="text-muted-foreground">Title:</span> <span className="font-medium ml-1">{result.title}</span></div>
+            <div><span className="text-muted-foreground">Organization:</span> <span className="font-medium ml-1">{result.organization}</span></div>
+            <div><span className="text-muted-foreground">Sector:</span> <span className="font-medium ml-1">{result.sector}</span></div>
+            <div><span className="text-muted-foreground">Stage:</span> <span className="font-medium ml-1">{result.stage_name} ({result.current_stage}/15)</span></div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="mb-6">
+            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+              <span>Progress</span>
+              <span>{result.progress_percentage}%</span>
+            </div>
+            <div className="w-full h-2 bg-muted rounded-full">
+              <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${result.progress_percentage}%` }} />
+            </div>
+          </div>
+
+          {/* Timeline */}
+          <h4 className="text-xs font-mono uppercase tracking-wider text-primary mb-3">Timeline</h4>
+          <div className="space-y-0">
+            {RIA_STAGES.map(stage => {
+              const isCompleted = result.current_stage > stage.number;
+              const isCurrent = result.current_stage === stage.number;
+              const historyEntry = stageHistory.find(h => h.stage_number === stage.number);
+
+              return (
+                <div key={stage.number} className="flex items-start gap-3 py-2">
+                  {isCompleted ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
+                  ) : isCurrent ? (
+                    <Clock className="h-4 w-4 text-primary animate-pulse mt-0.5" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-muted-foreground/40 mt-0.5" />
+                  )}
+                  <div className={`flex-1 ${!isCompleted && !isCurrent ? "opacity-40" : ""}`}>
+                    <p className={`text-xs font-medium ${isCurrent ? "text-primary" : ""}`}>
+                      {stage.name}
+                      {isCurrent && <span className="ml-2 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">Current</span>}
+                    </p>
+                    {historyEntry?.notes && <p className="text-[11px] text-muted-foreground mt-0.5">{historyEntry.notes}</p>}
+                    {historyEntry && <p className="text-[10px] text-muted-foreground/70">{formatDate(historyEntry.created_at)}</p>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// Shared Components & Utilities
+// =============================================================================
+function FormField({ label, value, onChange, required, type = "text" }: {
+  label: string; value: string; onChange: (v: string) => void; required?: boolean; type?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+        {label} {required && <span className="text-destructive">*</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        required={required}
+        className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
+      />
+    </div>
+  );
+}
+
+function formatDate(dateStr: string) {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}

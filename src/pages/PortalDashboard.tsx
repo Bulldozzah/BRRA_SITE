@@ -60,7 +60,7 @@ export default function PortalDashboard() {
 
 function getCards(role: string) {
   const common = [
-    { icon: FileText, title: "My Submissions", desc: "View RIA submissions and track their review status.", path: "#" },
+    { icon: FileText, title: "My Submissions", desc: "View RIA submissions and track their review status.", path: "/portal/ria" },
     { icon: Activity, title: "Recent Activity", desc: "Updates on licenses, permits and notifications.", path: "#" },
     { icon: CalendarDays, title: "Leave Management", desc: "Apply for leave, view balances and track applications.", path: "/portal/leave" },
   ];
@@ -70,13 +70,13 @@ function getCards(role: string) {
       { icon: Users, title: "User Management", desc: "Manage staff accounts, registrations and access.", path: "/portal/admin/users" },
       { icon: Settings, title: "System Settings", desc: "Configure portal-wide options and integrations.", path: "#" },
       ...common,
-      { icon: ClipboardList, title: "All RIA Reviews", desc: "Approve, reject or comment on submitted RIAs.", path: "#" },
+      { icon: ClipboardList, title: "All RIA Reviews", desc: "Approve, reject or comment on submitted RIAs.", path: "/portal/staff/ria" },
     ];
   }
   if (role === "staff") {
     return [
       { icon: UserCircle, title: "My Profile", desc: "View and complete your staff profile information.", path: "/portal/staff/profile" },
-      { icon: ClipboardList, title: "Review Queue", desc: "Process pending RIA submissions assigned to you.", path: "#" },
+      { icon: ClipboardList, title: "Review Queue", desc: "Process pending RIA submissions assigned to you.", path: "/portal/staff/ria" },
       { icon: CalendarDays, title: "Leave Dashboard", desc: "Manage leave applications, approvals and records.", path: "/portal/staff/leave" },
       { icon: Users, title: "Stakeholders", desc: "Communicate with applicants and regulatory bodies.", path: "#" },
       ...common,
