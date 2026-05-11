@@ -17,6 +17,7 @@ import {
   LEAVE_STATUS_LABELS,
   LEAVE_STATUS_COLORS,
 } from "@/types/leave";
+import { sendLeaveNotification } from "@/utils/sendLeaveNotification";
 
 export default function StaffLeaveApprovalsPage() {
   const { user, loading } = useAuth();
@@ -41,7 +42,8 @@ export default function StaffLeaveApprovalsPage() {
         .from("leave_applications")
         .select(`
           *,
-          employee:employee_id(full_name, employee_number, department_id, position_id)
+          employee:employee_id(full_name, employee_number, department_id, position_id, email),
+          applicant_profile:profiles!user_id(full_name, email)
         `)
         .order("application_date", { ascending: false });
 
@@ -55,9 +57,18 @@ export default function StaffLeaveApprovalsPage() {
     },
   });
 
-  // Recommend mutation (HoD / Staff)
+  // Helper to build email base from application
+  const buildEmailBase = (app: any) => ({
+    applicant_name: app.employee?.full_name || "Staff Member",
+    leave_type: LEAVE_TYPE_LABELS[app.leave_type as LeaveType] || app.leave_type,
+    start_date: app.start_date,
+    end_date: app.end_date,
+    requested_days: app.requested_days,
+  });
+
+  // Recommend mutation (HoD)
   const recommendMutation = useMutation({
-    mutationFn: async ({ id, recommendation, comment }: { id: string; recommendation: "recommended" | "not_recommended"; comment?: string }) => {
+    mutationFn: async ({ id, recommendation, comment, app }: { id: string; recommendation: "recommended" | "not_recommended"; comment?: string; app: any }) => {
       const { error } = await (supabase as any)
         .from("leave_applications")
         .update({
@@ -69,6 +80,45 @@ export default function StaffLeaveApprovalsPage() {
         })
         .eq("id", id);
       if (error) throw error;
+
+      // Send email notifications
+      const emailBase = buildEmailBase(app);
+      const applicantEmail = app.applicant_profile?.email || app.employee?.email;
+      const applicantName = app.applicant_profile?.full_name || app.employee?.full_name;
+
+      try {
+        if (recommendation === "recommended") {
+          // Notify applicant: recommended, awaiting ED
+          if (applicantEmail) {
+            await sendLeaveNotification({
+              ...emailBase,
+              notification_type: "hod_recommended",
+              reviewer_comment: comment,
+              recipients: [{ name: applicantName, email: applicantEmail, role: "Applicant" }],
+            });
+          }
+          // Notify ED: application needs your approval
+          if (app.ed_email) {
+            await sendLeaveNotification({
+              ...emailBase,
+              notification_type: "hod_recommended_ed",
+              recipients: [{ name: app.ed_name || "Executive Director", email: app.ed_email, role: "Executive Director" }],
+            });
+          }
+        } else {
+          // Notify applicant: not recommended
+          if (applicantEmail) {
+            await sendLeaveNotification({
+              ...emailBase,
+              notification_type: "hod_not_recommended",
+              reviewer_comment: comment,
+              recipients: [{ name: applicantName, email: applicantEmail, role: "Applicant" }],
+            });
+          }
+        }
+      } catch {
+        console.warn("Email notification could not be sent.");
+      }
     },
     onSuccess: () => {
       toast.success("Recommendation submitted");
@@ -77,9 +127,9 @@ export default function StaffLeaveApprovalsPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Approve mutation (admin can also approve from staff view)
+  // Approve mutation (Executive Director)
   const approveMutation = useMutation({
-    mutationFn: async ({ id, days, comment }: { id: string; days: number; comment?: string }) => {
+    mutationFn: async ({ id, days, comment, app }: { id: string; days: number; comment?: string; app: any }) => {
       const { error } = await (supabase as any)
         .from("leave_applications")
         .update({
@@ -91,6 +141,24 @@ export default function StaffLeaveApprovalsPage() {
         })
         .eq("id", id);
       if (error) throw error;
+
+      // Notify applicant: approved
+      const emailBase = buildEmailBase(app);
+      const applicantEmail = app.applicant_profile?.email || app.employee?.email;
+      const applicantName = app.applicant_profile?.full_name || app.employee?.full_name;
+
+      try {
+        if (applicantEmail) {
+          await sendLeaveNotification({
+            ...emailBase,
+            notification_type: "approved",
+            reviewer_comment: comment,
+            recipients: [{ name: applicantName, email: applicantEmail, role: "Applicant" }],
+          });
+        }
+      } catch {
+        console.warn("Email notification could not be sent.");
+      }
     },
     onSuccess: () => {
       toast.success("Leave application approved");
@@ -101,7 +169,7 @@ export default function StaffLeaveApprovalsPage() {
 
   // Reject mutation
   const rejectMutation = useMutation({
-    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+    mutationFn: async ({ id, reason, app }: { id: string; reason: string; app: any }) => {
       if (!reason.trim()) throw new Error("Rejection reason is required");
       const { error } = await (supabase as any)
         .from("leave_applications")
@@ -113,6 +181,24 @@ export default function StaffLeaveApprovalsPage() {
         })
         .eq("id", id);
       if (error) throw error;
+
+      // Notify applicant: rejected
+      const emailBase = buildEmailBase(app);
+      const applicantEmail = app.applicant_profile?.email || app.employee?.email;
+      const applicantName = app.applicant_profile?.full_name || app.employee?.full_name;
+
+      try {
+        if (applicantEmail) {
+          await sendLeaveNotification({
+            ...emailBase,
+            notification_type: "rejected",
+            reviewer_comment: reason,
+            recipients: [{ name: applicantName, email: applicantEmail, role: "Applicant" }],
+          });
+        }
+      } catch {
+        console.warn("Email notification could not be sent.");
+      }
     },
     onSuccess: () => {
       toast.success("Leave application rejected");
@@ -197,10 +283,11 @@ export default function StaffLeaveApprovalsPage() {
                 app={app}
                 expanded={expandedId === app.id}
                 onToggle={() => setExpandedId(expandedId === app.id ? null : app.id)}
-                onRecommend={(rec, comment) => recommendMutation.mutate({ id: app.id, recommendation: rec, comment })}
-                onApprove={(days, comment) => approveMutation.mutate({ id: app.id, days, comment })}
-                onReject={(reason) => rejectMutation.mutate({ id: app.id, reason })}
+                onRecommend={(rec, comment) => recommendMutation.mutate({ id: app.id, recommendation: rec, comment, app })}
+                onApprove={(days, comment) => approveMutation.mutate({ id: app.id, days, comment, app })}
+                onReject={(reason) => rejectMutation.mutate({ id: app.id, reason, app })}
                 userRole={user.role}
+                userId={user.id}
               />
             ))}
           </div>
@@ -218,9 +305,10 @@ interface ApprovalCardProps {
   onApprove: (days: number, comment?: string) => void;
   onReject: (reason: string) => void;
   userRole: string;
+  userId: string;
 }
 
-function ApprovalCard({ app, expanded, onToggle, onRecommend, onApprove, onReject, userRole }: ApprovalCardProps) {
+function ApprovalCard({ app, expanded, onToggle, onRecommend, onApprove, onReject, userRole, userId }: ApprovalCardProps) {
   const [hodComment, setHodComment] = useState("");
   const [approvalDays, setApprovalDays] = useState(app.requested_days);
   const [approvalComment, setApprovalComment] = useState("");
@@ -283,8 +371,8 @@ function ApprovalCard({ app, expanded, onToggle, onRecommend, onApprove, onRejec
             <div className="border-t border-gray-200 pt-5 space-y-4">
               <p className="text-xs font-mono uppercase tracking-wider text-amber-600 font-semibold">Part II — Approval Section</p>
 
-              {/* Staff: HoD Recommendation */}
-              {userRole === "staff" && !app.hod_recommendation && app.status === "pending" && (
+              {/* H.o.D Recommendation (visible only to the selected H.o.D) */}
+              {app.hod_id === userId && !app.hod_recommendation && app.status === "pending" && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
                   <h4 className="text-sm font-semibold text-gray-900">HoD Recommendation</h4>
                   <textarea
@@ -311,8 +399,8 @@ function ApprovalCard({ app, expanded, onToggle, onRecommend, onApprove, onRejec
                 </div>
               )}
 
-              {/* Admin: Approve/Reject */}
-              {userRole === "admin" && (
+              {/* Executive Director Approval (visible only after H.o.D recommends, to the selected ED or admin) */}
+              {app.hod_recommendation === "recommended" && (app.executive_director_id === userId || userRole === "admin") && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
                   <h4 className="text-sm font-semibold text-gray-900">Executive Director Approval</h4>
                   <div className="grid sm:grid-cols-2 gap-3">
@@ -320,11 +408,9 @@ function ApprovalCard({ app, expanded, onToggle, onRecommend, onApprove, onRejec
                       <label className="block text-xs text-gray-500 mb-1">Approved Days</label>
                       <input
                         type="number"
-                        min={1}
-                        max={365}
                         value={approvalDays}
-                        onChange={(e) => setApprovalDays(parseInt(e.target.value) || app.requested_days)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-amber-400"
+                        readOnly
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm cursor-not-allowed"
                       />
                     </div>
                     <div>

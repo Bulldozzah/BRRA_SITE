@@ -9,7 +9,14 @@ export type LeaveType =
   | "maternity"
   | "paternity"
   | "compassionate"
-  | "unpaid";
+  | "unpaid"
+  | "claim_annual_leave_days"
+  | "mothers_day"
+  | "forced"
+  | "commutation"
+  | "sabbatical_leave"
+  | "local_leave"
+  | "bereavement";
 
 export type LeaveStatus =
   | "pending"
@@ -34,10 +41,14 @@ export interface LeaveApplication {
   leave_balance: number | null;
   status: LeaveStatus;
   hod_id: string | null;
+  hod_name: string | null;
+  hod_email: string | null;
   hod_recommendation: "recommended" | "not_recommended" | null;
   hod_comment: string | null;
   hod_date: string | null;
   executive_director_id: string | null;
+  ed_name: string | null;
+  ed_email: string | null;
   approved_days: number | null;
   approver_id: string | null;
   approver_comment: string | null;
@@ -94,6 +105,13 @@ export const LEAVE_TYPE_LABELS: Record<LeaveType, string> = {
   paternity: "Paternity Leave",
   compassionate: "Compassionate Leave",
   unpaid: "Unpaid Leave",
+  claim_annual_leave_days: "Claim Annual Leave Days",
+  mothers_day: "Mothers Day",
+  forced: "Forced Leave",
+  commutation: "Commutation",
+  sabbatical_leave: "Sabbatical Leave",
+  local_leave: "Local Leave",
+  bereavement: "Bereavement Leave",
 };
 
 export const LEAVE_STATUS_LABELS: Record<LeaveStatus, string> = {

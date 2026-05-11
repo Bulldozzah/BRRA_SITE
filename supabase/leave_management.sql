@@ -112,7 +112,14 @@ INSERT INTO public.leave_settings (leave_type, days_per_year, rate_per_month, re
   ('maternity', 90, 0, true, 'Maternity leave'),
   ('paternity', 10, 0, true, 'Paternity leave'),
   ('compassionate', 7, 0, false, 'Compassionate leave'),
-  ('unpaid', 365, 0, false, 'Unpaid leave');
+  ('unpaid', 365, 0, false, 'Unpaid leave'),
+  ('claim_annual_leave_days', 30, 2.5, false, 'Claim annual leave days'),
+  ('mothers_day', 1, 0, true, 'Mothers Day'),
+  ('forced', 30, 0, true, 'Forced leave'),
+  ('commutation', 90, 0, true, 'Commutation'),
+  ('sabbatical_leave', 365, 0, true, 'Sabbatical Leave'),
+  ('local_leave', 7, 0, false, 'Local Leave'),
+  ('bereavement', 7, 0, false, 'Bereavement leave');
 
 -- =============================================================================
 -- Indexes

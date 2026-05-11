@@ -45,7 +45,7 @@ export default function LeaveApplication() {
       const { data, error } = await supabase
         .from("staff_profiles")
         .select(`
-          id, full_name, employee_number, department_id, position_id,
+          id, full_name, email, employee_number, department_id, position_id,
           date_joined,
           departments:department_id(name),
           positions:position_id(title)
@@ -221,22 +221,40 @@ export default function LeaveApplication() {
         leave_balance: currentBalance,
         status: "pending",
         hod_id: hodStaffProfile.user_id,
+        hod_name: hodStaffProfile.full_name,
+        hod_email: hodStaffProfile.email,
         executive_director_id: edStaffProfile.user_id,
+        ed_name: edStaffProfile.full_name,
+        ed_email: edStaffProfile.email,
       });
 
       if (error) throw error;
 
-      // Send email notifications to H.o.D and Executive Director
+      // Send email to applicant: your leave is pending
+      const emailBase = {
+        applicant_name: staffProfile.full_name,
+        leave_type: LEAVE_TYPE_LABELS[leaveType],
+        start_date: startDate,
+        end_date: endDate,
+        requested_days: requestedDays,
+      };
+
       try {
+        // Notify applicant
         await sendLeaveNotification({
-          applicant_name: staffProfile.full_name,
-          leave_type: LEAVE_TYPE_LABELS[leaveType],
-          start_date: startDate,
-          end_date: endDate,
-          requested_days: requestedDays,
+          ...emailBase,
+          notification_type: "submitted",
+          recipients: [
+            { name: staffProfile.full_name, email: staffProfile.email, role: "Applicant" },
+          ],
+        });
+
+        // Notify H.o.D only (ED gets notified after H.o.D recommends)
+        await sendLeaveNotification({
+          ...emailBase,
+          notification_type: "submitted_approver",
           recipients: [
             { name: hodStaffProfile.full_name, email: hodStaffProfile.email, role: "Head of Department" },
-            { name: edStaffProfile.full_name, email: edStaffProfile.email, role: "Executive Director" },
           ],
         });
       } catch {
