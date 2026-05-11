@@ -4,13 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import StaffLayout from "@/components/layout/StaffLayout";
-import { FileText, Search, Download } from "lucide-react";
+import { FileText, Search, Download, CalendarDays } from "lucide-react";
 import {
   LeaveType,
   LeaveStatus,
   LEAVE_TYPE_LABELS,
   LEAVE_STATUS_LABELS,
   LEAVE_STATUS_COLORS,
+  AnnualLeaveStatus,
+  ANNUAL_LEAVE_STATUS_LABELS,
+  ANNUAL_LEAVE_STATUS_COLORS,
 } from "@/types/leave";
 
 export default function StaffLeaveRecordsPage() {
@@ -34,6 +37,52 @@ export default function StaffLeaveRecordsPage() {
 }
 
 function LeaveRecordsContent() {
+  const [activeTab, setActiveTab] = useState<"normal" | "annual">("normal");
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Leave Records</h2>
+          <p className="text-gray-600 mt-1">Complete leave register across all staff.</p>
+        </div>
+      </div>
+
+      {/* Tab Switcher */}
+      <div className="flex border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab("normal")}
+          className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === "normal"
+              ? "border-amber-500 text-amber-700"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          }`}
+        >
+          <FileText className="h-4 w-4" />
+          Normal Leave
+        </button>
+        <button
+          onClick={() => setActiveTab("annual")}
+          className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === "annual"
+              ? "border-amber-500 text-amber-700"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          }`}
+        >
+          <CalendarDays className="h-4 w-4" />
+          Annual Leave
+        </button>
+      </div>
+
+      {activeTab === "normal" ? <NormalLeaveTab /> : <AnnualLeaveTab />}
+    </div>
+  );
+}
+
+// =============================================================================
+// Normal Leave Tab (existing functionality)
+// =============================================================================
+function NormalLeaveTab() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<LeaveType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<LeaveStatus | "all">("all");
@@ -110,20 +159,14 @@ function LeaveRecordsContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Leave Records</h2>
-          <p className="text-gray-600 mt-1">Complete leave register across all staff.</p>
+      <div className="flex items-center gap-3 text-sm">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
+          <span className="text-amber-700 font-semibold">{filtered.length}</span>
+          <span className="text-amber-600 ml-1">records</span>
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
-            <span className="text-amber-700 font-semibold">{filtered.length}</span>
-            <span className="text-amber-600 ml-1">records</span>
-          </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2">
-            <span className="text-green-700 font-semibold">{totalDays}</span>
-            <span className="text-green-600 ml-1">days approved</span>
-          </div>
+        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2">
+          <span className="text-green-700 font-semibold">{totalDays}</span>
+          <span className="text-green-600 ml-1">days approved</span>
         </div>
       </div>
 
@@ -293,6 +336,250 @@ function LeaveRecordsContent() {
                       ) : (
                         <span className="text-xs text-gray-400">—</span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500 hidden lg:table-cell">
+                      {formatDate(r.application_date)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// Annual Leave Tab
+// =============================================================================
+function AnnualLeaveTab() {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<AnnualLeaveStatus | "all">("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const { data: records = [], isLoading } = useQuery({
+    queryKey: ["annual_leave_records"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("annual_leave_applications")
+        .select("*")
+        .order("application_date", { ascending: false })
+        .limit(300);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const filtered = records.filter((r: any) => {
+    if (statusFilter !== "all" && r.status !== statusFilter) return false;
+    if (dateFrom && r.leave_start_date < dateFrom) return false;
+    if (dateTo && r.leave_start_date > dateTo) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const name = (`${r.surname} ${r.other_names}`).toLowerCase();
+      const dept = (r.department || "").toLowerCase();
+      if (!name.includes(q) && !dept.includes(q) && !(r.personnel_file_no || "").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  // Summary stats
+  const totalApproved = filtered.filter((r: any) => r.status === "approved");
+  const totalDays = totalApproved.reduce((sum: number, r: any) => sum + (r.leave_days_applied || 0), 0);
+
+  // Group by employee for staff summary
+  const staffSummary = totalApproved.reduce((acc: any, r: any) => {
+    const empId = r.employee_id;
+    const empName = `${r.surname}, ${r.other_names}`;
+    const dept = r.department || "";
+    const days = r.leave_days_applied || 0;
+    const commuted = r.days_commuted || 0;
+
+    if (!acc[empId]) {
+      acc[empId] = {
+        name: empName,
+        department: dept,
+        personnelNo: r.personnel_file_no || "",
+        totalDays: 0,
+        totalCommuted: 0,
+        applications: 0,
+      };
+    }
+
+    acc[empId].totalDays += days;
+    acc[empId].totalCommuted += commuted;
+    acc[empId].applications += 1;
+
+    return acc;
+  }, {});
+
+  const staffSummaryArray = Object.values(staffSummary).sort((a: any, b: any) =>
+    b.totalDays - a.totalDays
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 text-sm">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
+          <span className="text-amber-700 font-semibold">{filtered.length}</span>
+          <span className="text-amber-600 ml-1">records</span>
+        </div>
+        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2">
+          <span className="text-green-700 font-semibold">{totalDays}</span>
+          <span className="text-green-600 ml-1">days approved</span>
+        </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+          <span className="text-blue-700 font-semibold">{totalApproved.length}</span>
+          <span className="text-blue-600 ml-1">approved</span>
+        </div>
+      </div>
+
+      {/* Staff Summary */}
+      {staffSummaryArray.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-gray-900">Annual Leave Summary by Staff Member</h3>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {staffSummaryArray.map((staff: any, idx: number) => (
+              <div key={idx} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-semibold text-gray-900">{staff.name}</p>
+                    <p className="text-xs text-gray-500">{staff.department}</p>
+                    {staff.personnelNo && (
+                      <p className="text-xs text-gray-400">File: {staff.personnelNo}</p>
+                    )}
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded px-2 py-1 text-center">
+                    <p className="text-xs text-amber-600 font-medium">Total</p>
+                    <p className="text-lg font-bold text-amber-700">{staff.totalDays}</p>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-1.5">
+                    <span className="text-gray-700">Leave Days Taken</span>
+                    <span className="font-semibold text-gray-900">{staff.totalDays} days</span>
+                  </div>
+                  {staff.totalCommuted > 0 && (
+                    <div className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-1.5">
+                      <span className="text-gray-700">Days Commuted</span>
+                      <span className="font-semibold text-gray-900">{staff.totalCommuted} days</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-1.5">
+                    <span className="text-gray-700">Applications</span>
+                    <span className="font-semibold text-gray-900">{staff.applications}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="bg-white border border-gray-200 rounded-lg p-4 flex flex-wrap gap-3 items-end">
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-xs text-gray-500 mb-1">Search Employee</label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Name, department, or file no..."
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-amber-400"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Status</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as AnnualLeaveStatus | "all")}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-amber-400"
+          >
+            <option value="all">All Statuses</option>
+            {Object.entries(ANNUAL_LEAVE_STATUS_LABELS).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">From Date</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-amber-400"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">To Date</label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-amber-400"
+          />
+        </div>
+        {(dateFrom || dateTo) && (
+          <div className="flex items-end">
+            <button
+              onClick={() => { setDateFrom(""); setDateTo(""); }}
+              className="px-3 py-2 text-xs text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Clear Dates
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Detailed Records Table */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-gray-900">Individual Annual Leave Applications</h3>
+        {isLoading ? (
+          <p className="text-center text-gray-500 py-12">Loading records…</p>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-12 bg-white border border-gray-200 rounded-lg">
+            <CalendarDays className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No annual leave records found.</p>
+          </div>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs uppercase text-gray-500 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left">Employee</th>
+                  <th className="px-4 py-3 text-left">Department</th>
+                  <th className="px-4 py-3 text-left">Period</th>
+                  <th className="px-4 py-3 text-left">Days</th>
+                  <th className="px-4 py-3 text-left">Commuted</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left hidden lg:table-cell">Applied</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((r: any) => (
+                  <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-gray-900">{r.surname}, {r.other_names}</p>
+                      {r.personnel_file_no && <p className="text-xs text-gray-400">File: {r.personnel_file_no}</p>}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 text-xs">{r.department}</td>
+                    <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                      {formatDate(r.leave_start_date)} — {formatDate(r.resume_date)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-semibold">{r.leave_days_applied}</span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{r.days_commuted || 0}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-block px-2 py-0.5 text-[10px] font-mono rounded border ${ANNUAL_LEAVE_STATUS_COLORS[r.status as AnnualLeaveStatus]}`}>
+                        {ANNUAL_LEAVE_STATUS_LABELS[r.status as AnnualLeaveStatus]}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500 hidden lg:table-cell">
                       {formatDate(r.application_date)}
