@@ -59,6 +59,15 @@ export interface RiaStageHistory {
   created_at: string;
 }
 
+export interface RiaComment {
+  id: string;
+  submission_id: string;
+  user_id: string | null;
+  user_name: string | null;
+  comment: string;
+  created_at: string;
+}
+
 export const RIA_ORGANIZATION_TYPE_LABELS: Record<RiaOrganizationType, string> = {
   ministry: "Ministry",
   agency: "Government Agency",

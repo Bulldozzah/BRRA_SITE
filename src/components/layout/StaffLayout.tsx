@@ -32,6 +32,7 @@ const leaveItems: NavItem[] = [
 
 const riaItems: NavItem[] = [
   { id: "ria", label: "RIA Submissions", icon: FileText, path: "/portal/staff/ria" },
+  { id: "ria-reports", label: "RIA Reports", icon: FileText, path: "/portal/staff/ria/reports" },
 ];
 
 interface StaffLayoutProps {

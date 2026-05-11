@@ -43,6 +43,7 @@ import AnnualLeaveApplication from "./pages/leave/AnnualLeaveApplication";
 import AnnualLeaveApprovals from "./pages/leave/AnnualLeaveApprovals";
 import RiaDashboard from "./pages/portal/RiaDashboard";
 import StaffRiaPage from "./pages/staff/StaffRiaPage";
+import StaffRiaReportsPage from "./pages/staff/StaffRiaReportsPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -96,6 +97,7 @@ const App = () => (
           <Route path="/portal/leave/annual/approvals" element={<AnnualLeaveApprovals />} />
           <Route path="/portal/ria" element={<RiaDashboard />} />
           <Route path="/portal/staff/ria" element={<StaffRiaPage />} />
+          <Route path="/portal/staff/ria/reports" element={<StaffRiaReportsPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
