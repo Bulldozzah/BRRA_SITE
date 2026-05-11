@@ -5,7 +5,7 @@ import { useStaffProfileCheck } from "@/hooks/useStaffProfileCheck";
 import {
   Users, LogOut, LayoutDashboard, Menu, PanelLeftClose, Bell,
   ExternalLink, ChevronRight, CalendarDays, CalendarPlus, ClipboardCheck,
-  Clock, FileText, UserCircle,
+  Clock, FileText, UserCircle, Send, Search, BarChart3,
 } from "lucide-react";
 
 type NavItem = {
@@ -31,8 +31,11 @@ const leaveItems: NavItem[] = [
 ];
 
 const riaItems: NavItem[] = [
-  { id: "ria", label: "RIA Submissions", icon: FileText, path: "/portal/staff/ria" },
-  { id: "ria-reports", label: "RIA Reports", icon: FileText, path: "/portal/staff/ria/reports" },
+  { id: "ria-my", label: "My Submissions", icon: FileText, path: "/portal/ria" },
+  { id: "ria-submit", label: "Submit RIA", icon: Send, path: "/portal/ria" },
+  { id: "ria-track", label: "Track Submission", icon: Search, path: "/portal/ria" },
+  { id: "ria", label: "RIA Management", icon: ClipboardCheck, path: "/portal/staff/ria" },
+  { id: "ria-reports", label: "RIA Reports", icon: BarChart3, path: "/portal/staff/ria/reports" },
 ];
 
 interface StaffLayoutProps {
