@@ -90,34 +90,6 @@ export default function News() {
           <p className="text-center text-muted-foreground py-12">Loading news...</p>
         )}
 
-        {/* Featured Section */}
-        {!isLoading && featured.length > 0 && filter === "General" && !search && (
-          <div className="mb-12">
-            {featured.slice(0, 1).map(article => (
-              <article
-                key={article.id}
-                onClick={() => setSelectedArticle(article)}
-                className="group cursor-pointer p-10 lg:p-14 bg-gradient-noir border border-primary/30 rounded-sm hover:border-primary transition-colors"
-              >
-                <div className="flex items-center gap-3 mb-5 text-xs">
-                  <span className="px-2.5 py-1 bg-primary text-primary-foreground font-mono uppercase tracking-wider">Featured · {article.category}</span>
-                  <span className="text-muted-foreground inline-flex items-center gap-1.5">
-                    <Calendar className="h-3 w-3" />
-                    {article.published_at ? new Date(article.published_at).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : ""}
-                  </span>
-                </div>
-                {article.image_url && (
-                  <div className="mb-6 h-48 rounded-sm overflow-hidden bg-noir-elevated">
-                    <img src={article.image_url} alt={article.title} className="w-full h-full object-cover" />
-                  </div>
-                )}
-                <h2 className="font-display text-3xl lg:text-4xl font-bold mb-4 group-hover:text-primary transition-colors max-w-3xl leading-tight">{article.title}</h2>
-                <p className="text-muted-foreground max-w-2xl mb-6 leading-relaxed">{article.summary || article.content.substring(0, 150) + "..."}</p>
-                <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">Read full article <ArrowUpRight className="h-4 w-4" /></span>
-              </article>
-            ))}
-          </div>
-        )}
 
         {/* Results count */}
         {!isLoading && (
@@ -197,10 +169,6 @@ export default function News() {
 
                   {selectedArticle.summary && (
                     <p className="text-muted-foreground leading-relaxed">{selectedArticle.summary}</p>
-                  )}
-
-                  {selectedArticle.author_name && (
-                    <p className="text-xs text-muted-foreground">By {selectedArticle.author_name}</p>
                   )}
 
                   {selectedArticle.pdf_url && (
