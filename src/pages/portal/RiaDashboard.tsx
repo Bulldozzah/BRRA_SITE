@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import PageLayout from "@/components/layout/PageLayout";
 import { toast } from "sonner";
+import { sendRiaNotification } from "@/utils/sendRiaNotification";
 import {
   Send, FileText, Search, Upload, CheckCircle2, Clock, Circle,
   XCircle, AlertCircle, Eye, ChevronDown, ChevronUp,
@@ -26,26 +27,26 @@ import {
 
 export default function RiaDashboard() {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (loading) return;
-    if (!user) navigate("/portal/login");
-  }, [user, loading, navigate]);
-
-  if (loading || !user) return null;
+  if (loading) return null;
 
   return (
     <PageLayout>
       <section className="py-12 container-wide">
-        <RiaContent userId={user.id} userEmail={user.email || ""} userName={user.name || ""} userRole={user.role} />
+        <RiaContent
+          userId={user?.id || ""}
+          userEmail={user?.email || ""}
+          userName={user?.name || ""}
+          userRole={user?.role || ""}
+          isAuthenticated={!!user}
+        />
       </section>
     </PageLayout>
   );
 }
 
-function RiaContent({ userId, userEmail, userName, userRole }: { userId: string; userEmail: string; userName: string; userRole: string }) {
-  const [activeTab, setActiveTab] = useState<"submissions" | "submit" | "track">("submissions");
+function RiaContent({ userId, userEmail, userName, userRole, isAuthenticated }: { userId: string; userEmail: string; userName: string; userRole: string; isAuthenticated: boolean }) {
+  const [activeTab, setActiveTab] = useState<"submissions" | "submit" | "track">(isAuthenticated ? "submissions" : "submit");
   const queryClient = useQueryClient();
 
   const navItems = [
@@ -61,9 +62,27 @@ function RiaContent({ userId, userEmail, userName, userRole }: { userId: string;
         <div className="lg:sticky lg:top-24 space-y-6">
           {/* Welcome card */}
           <div className="bg-noir-elevated border border-border rounded-sm p-6">
-            <p className="text-xs font-mono uppercase tracking-[0.15em] text-primary mb-2">Welcome</p>
-            <h2 className="font-display text-xl font-bold mb-1">{userName || "User"}</h2>
-            <p className="text-xs text-muted-foreground">{userEmail}</p>
+            {isAuthenticated ? (
+              <>
+                <p className="text-xs font-mono uppercase tracking-[0.15em] text-primary mb-2">Welcome</p>
+                <h2 className="font-display text-xl font-bold mb-1">{userName || "User"}</h2>
+                <p className="text-xs text-muted-foreground">{userEmail}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs font-mono uppercase tracking-[0.15em] text-primary mb-2">RIA Portal</p>
+                <h2 className="font-display text-lg font-bold mb-2">Submit a Regulatory Impact Assessment</h2>
+                <p className="text-xs text-muted-foreground mb-4">Register or login to request submission of your RIA.</p>
+                <div className="flex flex-col gap-2">
+                  <a href="/portal/register" className="block text-center px-4 py-2.5 bg-gradient-gold text-primary-foreground text-xs font-semibold rounded-sm hover:shadow-gold transition-all">
+                    Register
+                  </a>
+                  <a href="/portal/login" className="block text-center px-4 py-2.5 border border-border text-xs font-medium rounded-sm hover:border-primary hover:text-primary transition-colors">
+                    Login
+                  </a>
+                </div>
+              </>
+            )}
           </div>
 
           {/* RIA Navigation */}
@@ -111,31 +130,55 @@ function RiaContent({ userId, userEmail, userName, userRole }: { userId: string;
           </p>
         </div>
 
-        {activeTab === "submissions" && <SubmissionsTab userId={userId} userEmail={userEmail} />}
-        {activeTab === "submit" && (
-          (userRole === "staff" || userRole === "admin") ? (
-            <SubmitTab
-              userId={userId}
-              userEmail={userEmail}
-              userName={userName}
-              onSuccess={() => {
-                queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
-                setActiveTab("submissions");
-              }}
-            />
-          ) : (
-            <RequestToSubmitTab
-              userId={userId}
-              userEmail={userEmail}
-              userName={userName}
-              onApprovedSubmit={() => {
-                queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
-                setActiveTab("submissions");
-              }}
-            />
-          )
+        {/* Login required prompt for unauthenticated users on protected tabs */}
+        {!isAuthenticated && activeTab !== "track" ? (
+          <div className="bg-noir-elevated border border-border rounded-sm p-10 text-center">
+            <FileText className="h-12 w-12 text-primary mx-auto mb-4" />
+            <h3 className="font-display text-xl font-bold mb-2">Login Required</h3>
+            <p className="text-muted-foreground text-sm mb-6">
+              You need to register or login to {activeTab === "submit" ? "request to submit a RIA" : "view your submissions"}.
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <a href="/portal/register" className="px-6 py-3 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all text-sm">
+                Register
+              </a>
+              <a href="/portal/login" className="px-6 py-3 border border-border font-medium rounded-sm hover:border-primary hover:text-primary transition-colors text-sm">
+                Login
+              </a>
+            </div>
+            <p className="text-xs text-muted-foreground mt-6">
+              After registering, you can submit a request. Once approved by staff, you'll receive an email and can submit your full RIA.
+            </p>
+          </div>
+        ) : (
+          <>
+            {activeTab === "submissions" && <SubmissionsTab userId={userId} userEmail={userEmail} />}
+            {activeTab === "submit" && (
+              (userRole === "staff" || userRole === "admin") ? (
+                <SubmitTab
+                  userId={userId}
+                  userEmail={userEmail}
+                  userName={userName}
+                  onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
+                    setActiveTab("submissions");
+                  }}
+                />
+              ) : (
+                <RequestToSubmitTab
+                  userId={userId}
+                  userEmail={userEmail}
+                  userName={userName}
+                  onApprovedSubmit={() => {
+                    queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
+                    setActiveTab("submissions");
+                  }}
+                />
+              )
+            )}
+            {activeTab === "track" && <TrackTab />}
+          </>
         )}
-        {activeTab === "track" && <TrackTab />}
       </div>
     </div>
   );
@@ -632,7 +675,16 @@ function RequestToSubmitTab({ userId, userEmail, userName, onApprovedSubmit }: {
         });
       if (error) throw error;
 
-      toast.success("Request submitted! You will be notified once staff approves it.");
+      // Send confirmation email - request under review
+      sendRiaNotification({
+        recipient_name: userName,
+        recipient_email: userEmail,
+        notification_type: "request_submitted",
+        ria_title: formData.title,
+        organization: formData.organization,
+      });
+
+      toast.success("Request submitted! You will receive an email confirmation. Staff will review your request.");
       setFormData({ organization: "", organization_type: "other", title: "", purpose: "", sector: RIA_SECTORS[0] });
       refreshRequests();
     } catch (err: any) {

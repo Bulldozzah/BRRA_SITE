@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import StaffLayout from "@/components/layout/StaffLayout";
 import { toast } from "sonner";
+import { sendRiaNotification } from "@/utils/sendRiaNotification";
 import {
   FileText, Search, CheckCircle2, Clock, Circle, XCircle,
   UserPlus, ArrowRight, X, Eye, History, User,
@@ -124,6 +125,7 @@ function RiaManagementContent({ userId, userName }: { userId: string; userName: 
   const pendingRequests = submissionRequests.filter(r => r.status === "pending");
 
   const handleApproveRequest = async (reqId: string) => {
+    const req = submissionRequests.find(r => r.id === reqId);
     try {
       const { error } = await (supabase as any)
         .from("ria_submission_requests")
@@ -135,6 +137,19 @@ function RiaManagementContent({ userId, userName }: { userId: string; userName: 
         })
         .eq("id", reqId);
       if (error) throw error;
+
+      // Send approval email to user
+      if (req) {
+        sendRiaNotification({
+          recipient_name: req.user_name,
+          recipient_email: req.user_email,
+          notification_type: "request_approved",
+          ria_title: req.title,
+          organization: req.organization,
+          reviewer_name: userName,
+        });
+      }
+
       toast.success("Request approved. The user can now submit their RIA.");
       refreshRequests();
     } catch (err: any) {
@@ -143,6 +158,7 @@ function RiaManagementContent({ userId, userName }: { userId: string; userName: 
   };
 
   const handleRejectRequest = async (reqId: string) => {
+    const req = submissionRequests.find(r => r.id === reqId);
     try {
       const { error } = await (supabase as any)
         .from("ria_submission_requests")
@@ -155,6 +171,20 @@ function RiaManagementContent({ userId, userName }: { userId: string; userName: 
         })
         .eq("id", reqId);
       if (error) throw error;
+
+      // Send rejection email to user
+      if (req) {
+        sendRiaNotification({
+          recipient_name: req.user_name,
+          recipient_email: req.user_email,
+          notification_type: "request_rejected",
+          ria_title: req.title,
+          organization: req.organization,
+          reviewer_name: userName,
+          rejection_reason: rejectionReason || undefined,
+        });
+      }
+
       toast.success("Request rejected.");
       setRejectingId(null);
       setRejectionReason("");
