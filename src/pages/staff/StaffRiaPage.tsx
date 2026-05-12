@@ -460,59 +460,116 @@ function RiaManagementContent({ userId, userName }: { userId: string; userName: 
         </div>
       </div>
 
-      {/* Pending Submission Requests */}
-      {!loadingRequests && pendingRequests.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <UserPlus className="h-4 w-4 text-amber-600" />
-            <h3 className="text-sm font-bold text-amber-800">Pending Submission Requests ({pendingRequests.length})</h3>
+      {/* All Submission Requests — RIA Numbers, Username, Email, Date */}
+      {!loadingRequests && submissionRequests.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4 text-amber-600" />
+              <h3 className="text-sm font-bold text-gray-800">
+                Submission Requests
+                {pendingRequests.length > 0 && (
+                  <span className="ml-2 px-2 py-0.5 text-[10px] bg-amber-100 text-amber-700 rounded-full font-semibold">{pendingRequests.length} pending</span>
+                )}
+              </h3>
+            </div>
+            <span className="text-xs text-gray-400">{submissionRequests.length} total</span>
           </div>
-          <div className="space-y-2">
-            {pendingRequests.map(req => (
-              <div key={req.id} className="bg-white border border-amber-100 rounded-lg p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-gray-900">{req.title}</p>
-                    <p className="text-xs text-gray-600 mt-0.5">
-                      <span className="font-medium">{req.user_name}</span> · {req.user_email}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">{req.organization} · {req.sector}</p>
-                    <p className="text-xs text-gray-500 mt-1 italic">{req.purpose}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">
-                      Requested {new Date(req.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {rejectingId === req.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={rejectionReason}
-                          onChange={e => setRejectionReason(e.target.value)}
-                          placeholder="Reason (optional)"
-                          className="px-2 py-1 text-xs border border-gray-200 rounded w-40 focus:outline-none focus:border-red-400"
-                        />
-                        <button onClick={() => handleRejectRequest(req.id)} className="px-2 py-1 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700">
-                          Confirm
-                        </button>
-                        <button onClick={() => { setRejectingId(null); setRejectionReason(""); }} className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700">
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <button onClick={() => handleApproveRequest(req.id)} className="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded hover:bg-green-700">
-                          Approve
-                        </button>
-                        <button onClick={() => setRejectingId(req.id)} className="px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded hover:bg-red-200">
-                          Reject
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-left text-[11px] uppercase tracking-wider text-gray-500">
+                  <th className="px-4 py-2.5 font-medium">RIA Number(s)</th>
+                  <th className="px-4 py-2.5 font-medium">User</th>
+                  <th className="px-4 py-2.5 font-medium">Email</th>
+                  <th className="px-4 py-2.5 font-medium">Title</th>
+                  <th className="px-4 py-2.5 font-medium">Organization</th>
+                  <th className="px-4 py-2.5 font-medium">Date</th>
+                  <th className="px-4 py-2.5 font-medium">Status</th>
+                  <th className="px-4 py-2.5 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {submissionRequests.map(req => {
+                  // Find RIA submissions by this user
+                  const userSubmissions = submissions.filter(s => s.user_id === req.user_id);
+                  const statusBadge = {
+                    pending: "bg-yellow-100 text-yellow-700 border-yellow-200",
+                    approved: "bg-green-100 text-green-700 border-green-200",
+                    rejected: "bg-red-100 text-red-700 border-red-200",
+                  };
+                  const statusLabel = { pending: "Pending", approved: "Approved", rejected: "Rejected" };
+                  return (
+                    <tr key={req.id} className={`hover:bg-gray-50 ${req.status === "pending" ? "bg-amber-50/40" : ""}`}>
+                      <td className="px-4 py-3">
+                        {userSubmissions.length > 0 ? (
+                          <div className="flex flex-col gap-0.5">
+                            {userSubmissions.map(s => (
+                              <span key={s.id} className="font-mono text-xs text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded inline-block">
+                                {s.tracking_number}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">No submissions yet</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-900 text-xs">{req.user_name}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600">{req.user_email}</td>
+                      <td className="px-4 py-3 text-xs text-gray-800 max-w-[200px] truncate" title={req.title}>{req.title}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600">{req.organization}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                        {new Date(req.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 text-[10px] font-semibold rounded border ${statusBadge[req.status]}`}>
+                          {statusLabel[req.status]}
+                        </span>
+                        {req.reviewed_by_name && (
+                          <p className="text-[10px] text-gray-400 mt-0.5">by {req.reviewed_by_name}</p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {req.status === "pending" ? (
+                          rejectingId === req.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                value={rejectionReason}
+                                onChange={e => setRejectionReason(e.target.value)}
+                                placeholder="Reason"
+                                className="px-2 py-1 text-xs border border-gray-200 rounded w-28 focus:outline-none focus:border-red-400"
+                              />
+                              <button onClick={() => handleRejectRequest(req.id)} className="px-2 py-1 text-[10px] font-medium bg-red-600 text-white rounded hover:bg-red-700">
+                                OK
+                              </button>
+                              <button onClick={() => { setRejectingId(null); setRejectionReason(""); }} className="px-1 py-1 text-[10px] text-gray-400 hover:text-gray-600">
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => handleApproveRequest(req.id)} className="px-2.5 py-1 text-[10px] font-medium bg-green-600 text-white rounded hover:bg-green-700">
+                                Approve
+                              </button>
+                              <button onClick={() => setRejectingId(req.id)} className="px-2.5 py-1 text-[10px] font-medium bg-red-50 text-red-600 rounded hover:bg-red-100">
+                                Reject
+                              </button>
+                            </div>
+                          )
+                        ) : req.rejection_reason ? (
+                          <span className="text-[10px] text-red-500 italic" title={req.rejection_reason}>
+                            {req.rejection_reason.length > 20 ? req.rejection_reason.slice(0, 20) + "…" : req.rejection_reason}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-gray-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

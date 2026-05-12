@@ -464,6 +464,16 @@ function SubmitTab({ userId, userEmail, userName, onSuccess, prefillOrganization
           notes: "RIA submission received and logged in the system.",
         });
 
+      // Send email with tracking number
+      sendRiaNotification({
+        recipient_name: formData.submitter_name,
+        recipient_email: formData.submitter_email,
+        notification_type: "ria_submitted",
+        ria_title: formData.title,
+        organization: formData.organization,
+        tracking_number: trackingNumber,
+      });
+
       toast.success(`Submission successful! Tracking number: ${trackingNumber}`);
 
       // Reset form

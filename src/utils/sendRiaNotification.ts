@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 export type RiaNotificationType =
   | "request_submitted"   // To user: your request is under review
   | "request_approved"    // To user: your request was approved, submit your RIA
-  | "request_rejected";   // To user: your request was rejected
+  | "request_rejected"    // To user: your request was rejected
+  | "ria_submitted";      // To user: your RIA has been submitted with tracking number
 
 interface RiaNotificationPayload {
   recipient_name: string;
@@ -11,6 +12,7 @@ interface RiaNotificationPayload {
   notification_type: RiaNotificationType;
   ria_title: string;
   organization: string;
+  tracking_number?: string;
   reviewer_name?: string;
   rejection_reason?: string;
 }
@@ -25,6 +27,7 @@ export async function sendRiaNotification(payload: RiaNotificationPayload): Prom
       notification_type: payload.notification_type,
       ria_title: payload.ria_title,
       organization: payload.organization,
+      tracking_number: payload.tracking_number || null,
       reviewer_name: payload.reviewer_name || null,
       rejection_reason: payload.rejection_reason || null,
     });

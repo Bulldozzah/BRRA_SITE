@@ -12,6 +12,7 @@ CREATE OR REPLACE FUNCTION public.send_ria_notification_email(
   notification_type TEXT,
   ria_title TEXT,
   organization TEXT,
+  tracking_number TEXT DEFAULT NULL,
   reviewer_name TEXT DEFAULT NULL,
   rejection_reason TEXT DEFAULT NULL
 ) RETURNS void AS $$
@@ -44,6 +45,13 @@ BEGIN
           THEN format(E'- Reason: %s', rejection_reason)
           ELSE ''
         END
+      );
+
+    WHEN 'ria_submitted' THEN
+      email_subject := format('BRRA - RIA Submitted Successfully [%s]', COALESCE(tracking_number, ''));
+      email_body := format(
+        E'Dear %s,\n\nYour Regulatory Impact Assessment has been successfully submitted.\n\nDetails:\n- RIA Number: %s\n- Title: %s\n- Organization: %s\n- Date Submitted: %s\n\nPlease keep your RIA number for your records. You can use it to track the progress of your submission on the BRRA Portal.\n\nYour submission will now go through our 15-stage review pipeline. You will be notified of any updates.\n\nRegards,\nBusiness Regulatory Review Agency (BRRA)',
+        recipient_name, COALESCE(tracking_number, 'N/A'), ria_title, organization, to_char(now(), 'DD Mon YYYY')
       );
 
     ELSE
