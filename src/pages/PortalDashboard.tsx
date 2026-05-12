@@ -77,7 +77,7 @@ function getCards(role: string) {
     return [
       { icon: UserCircle, title: "My Profile", desc: "View and complete your staff profile information.", path: "/portal/staff/profile" },
       { icon: ClipboardList, title: "Review Queue", desc: "Process pending RIA submissions assigned to you.", path: "/portal/staff/ria" },
-      { icon: CalendarDays, title: "Leave Dashboard", desc: "Manage leave applications, approvals and records.", path: "/portal/staff/leave" },
+      { icon: CalendarDays, title: "Dashboard", desc: "Manage leave applications, approvals and records.", path: "/portal/staff/leave" },
       { icon: Users, title: "Stakeholders", desc: "Communicate with applicants and regulatory bodies.", path: "#" },
       ...common,
       { icon: CalendarDays, title: "Leave Management", desc: "Apply for leave, view balances and track applications.", path: "/portal/leave" },
