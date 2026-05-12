@@ -62,7 +62,6 @@ function getCards(role: string) {
   const common = [
     { icon: FileText, title: "My Submissions", desc: "View RIA submissions and track their review status.", path: "/portal/ria" },
     { icon: Activity, title: "Recent Activity", desc: "Updates on licenses, permits and notifications.", path: "#" },
-    { icon: CalendarDays, title: "Leave Management", desc: "Apply for leave, view balances and track applications.", path: "/portal/leave" },
   ];
   if (role === "admin") {
     return [
@@ -70,6 +69,7 @@ function getCards(role: string) {
       { icon: Users, title: "User Management", desc: "Manage staff accounts, registrations and access.", path: "/portal/admin/users" },
       { icon: Settings, title: "System Settings", desc: "Configure portal-wide options and integrations.", path: "#" },
       ...common,
+      { icon: CalendarDays, title: "Leave Management", desc: "Apply for leave, view balances and track applications.", path: "/portal/leave" },
       { icon: ClipboardList, title: "All RIA Reviews", desc: "Approve, reject or comment on submitted RIAs.", path: "/portal/staff/ria" },
     ];
   }
@@ -80,6 +80,7 @@ function getCards(role: string) {
       { icon: CalendarDays, title: "Leave Dashboard", desc: "Manage leave applications, approvals and records.", path: "/portal/staff/leave" },
       { icon: Users, title: "Stakeholders", desc: "Communicate with applicants and regulatory bodies.", path: "#" },
       ...common,
+      { icon: CalendarDays, title: "Leave Management", desc: "Apply for leave, view balances and track applications.", path: "/portal/leave" },
     ];
   }
   return [
