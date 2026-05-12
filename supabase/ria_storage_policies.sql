@@ -39,7 +39,7 @@ USING (
   bucket_id = 'ria-documents'
   AND (
     EXISTS (
-      SELECT 1 FROM public.users
+      SELECT 1 FROM public.profiles
       WHERE id = auth.uid()
       AND role IN ('staff', 'admin')
     )
