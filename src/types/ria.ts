@@ -59,6 +59,24 @@ export interface RiaStageHistory {
   created_at: string;
 }
 
+export interface RiaSubmissionRequest {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  organization: string;
+  organization_type: string;
+  title: string;
+  purpose: string;
+  sector: string;
+  status: "pending" | "approved" | "rejected";
+  reviewed_by: string | null;
+  reviewed_by_name: string | null;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+}
+
 export interface RiaComment {
   id: string;
   submission_id: string;

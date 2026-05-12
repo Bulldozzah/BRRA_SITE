@@ -12,6 +12,7 @@ import {
 import {
   RiaSubmission,
   RiaStageHistory,
+  RiaSubmissionRequest,
   RIA_ORGANIZATION_TYPE_LABELS,
   RIA_REGULATION_TYPE_LABELS,
   RIA_STATUS_LABELS,
@@ -37,13 +38,13 @@ export default function RiaDashboard() {
   return (
     <PageLayout>
       <section className="py-12 container-wide">
-        <RiaContent userId={user.id} userEmail={user.email || ""} userName={user.name || ""} />
+        <RiaContent userId={user.id} userEmail={user.email || ""} userName={user.name || ""} userRole={user.role} />
       </section>
     </PageLayout>
   );
 }
 
-function RiaContent({ userId, userEmail, userName }: { userId: string; userEmail: string; userName: string }) {
+function RiaContent({ userId, userEmail, userName, userRole }: { userId: string; userEmail: string; userName: string; userRole: string }) {
   const [activeTab, setActiveTab] = useState<"submissions" | "submit" | "track">("submissions");
   const queryClient = useQueryClient();
 
@@ -103,22 +104,36 @@ function RiaContent({ userId, userEmail, userName }: { userId: string; userEmail
             {activeTab === "submissions"
               ? "View and monitor your Regulatory Impact Assessment submissions."
               : activeTab === "submit"
-              ? "Submit a new Regulatory Impact Assessment for review."
+              ? (userRole === "staff" || userRole === "admin")
+                ? "Submit a new Regulatory Impact Assessment for review."
+                : "Request permission to submit a Regulatory Impact Assessment."
               : "Track the status of any RIA using its tracking number."}
           </p>
         </div>
 
         {activeTab === "submissions" && <SubmissionsTab userId={userId} userEmail={userEmail} />}
         {activeTab === "submit" && (
-          <SubmitTab
-            userId={userId}
-            userEmail={userEmail}
-            userName={userName}
-            onSuccess={() => {
-              queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
-              setActiveTab("submissions");
-            }}
-          />
+          (userRole === "staff" || userRole === "admin") ? (
+            <SubmitTab
+              userId={userId}
+              userEmail={userEmail}
+              userName={userName}
+              onSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
+                setActiveTab("submissions");
+              }}
+            />
+          ) : (
+            <RequestToSubmitTab
+              userId={userId}
+              userEmail={userEmail}
+              userName={userName}
+              onApprovedSubmit={() => {
+                queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
+                setActiveTab("submissions");
+              }}
+            />
+          )
         )}
         {activeTab === "track" && <TrackTab />}
       </div>
@@ -287,8 +302,9 @@ function SubmissionCard({ submission, expanded, onToggle }: {
 // =============================================================================
 // Submit RIA Tab
 // =============================================================================
-function SubmitTab({ userId, userEmail, userName, onSuccess }: {
+function SubmitTab({ userId, userEmail, userName, onSuccess, prefillOrganization, prefillTitle, prefillSector, prefillOrgType }: {
   userId: string; userEmail: string; userName: string; onSuccess: () => void;
+  prefillOrganization?: string; prefillTitle?: string; prefillSector?: string; prefillOrgType?: string;
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -300,11 +316,11 @@ function SubmitTab({ userId, userEmail, userName, onSuccess }: {
     submitter_name: userName,
     submitter_email: userEmail,
     submitter_phone: "",
-    organization: "",
-    organization_type: "other" as RiaOrganizationType,
-    title: "",
+    organization: prefillOrganization || "",
+    organization_type: (prefillOrgType || "other") as RiaOrganizationType,
+    title: prefillTitle || "",
     description: "",
-    sector: RIA_SECTORS[0],
+    sector: prefillSector || RIA_SECTORS[0],
     regulation_type: "new_regulation" as RiaRegulationType,
   });
 
@@ -544,6 +560,238 @@ function SubmitTab({ userId, userEmail, userName, onSuccess }: {
         {submitting ? "Submitting…" : "Submit RIA"}
       </button>
     </form>
+  );
+}
+
+// =============================================================================
+// Request to Submit Tab (Regular Users)
+// =============================================================================
+function RequestToSubmitTab({ userId, userEmail, userName, onApprovedSubmit }: {
+  userId: string; userEmail: string; userName: string; onApprovedSubmit: () => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [requests, setRequests] = useState<RiaSubmissionRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+  const [showSubmitForm, setShowSubmitForm] = useState<string | null>(null); // approved request id
+  const queryClient = useQueryClient();
+
+  const [formData, setFormData] = useState({
+    organization: "",
+    organization_type: "other" as RiaOrganizationType,
+    title: "",
+    purpose: "",
+    sector: RIA_SECTORS[0],
+  });
+
+  // Fetch user's requests
+  useEffect(() => {
+    (async () => {
+      setLoadingRequests(true);
+      const { data } = await (supabase as any)
+        .from("ria_submission_requests")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      setRequests((data || []) as RiaSubmissionRequest[]);
+      setLoadingRequests(false);
+    })();
+  }, [userId]);
+
+  const refreshRequests = async () => {
+    const { data } = await (supabase as any)
+      .from("ria_submission_requests")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    setRequests((data || []) as RiaSubmissionRequest[]);
+  };
+
+  const hasPending = requests.some(r => r.status === "pending");
+
+  const handleRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.organization || !formData.title || !formData.purpose) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("ria_submission_requests")
+        .insert({
+          user_id: userId,
+          user_name: userName,
+          user_email: userEmail,
+          organization: formData.organization,
+          organization_type: formData.organization_type,
+          title: formData.title,
+          purpose: formData.purpose,
+          sector: formData.sector,
+          status: "pending",
+        });
+      if (error) throw error;
+
+      toast.success("Request submitted! You will be notified once staff approves it.");
+      setFormData({ organization: "", organization_type: "other", title: "", purpose: "", sector: RIA_SECTORS[0] });
+      refreshRequests();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to submit request.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const update = (field: string, value: string) => setFormData(prev => ({ ...prev, [field]: value }));
+
+  // If user clicked "Proceed to Submit" on an approved request, show the full submit form
+  if (showSubmitForm) {
+    const approvedReq = requests.find(r => r.id === showSubmitForm);
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={() => setShowSubmitForm(null)}
+          className="text-xs text-primary hover:underline flex items-center gap-1"
+        >
+          ← Back to requests
+        </button>
+        <SubmitTab
+          userId={userId}
+          userEmail={userEmail}
+          userName={userName}
+          prefillOrganization={approvedReq?.organization}
+          prefillTitle={approvedReq?.title}
+          prefillSector={approvedReq?.sector}
+          prefillOrgType={approvedReq?.organization_type}
+          onSuccess={() => {
+            onApprovedSubmit();
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Existing requests */}
+      {loadingRequests ? (
+        <p className="text-center text-muted-foreground py-8">Loading your requests…</p>
+      ) : requests.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="font-display text-lg font-bold">Your Requests</h3>
+          {requests.map(req => {
+            const statusStyles = {
+              pending: "bg-yellow-50 border-yellow-200 text-yellow-700",
+              approved: "bg-green-50 border-green-200 text-green-700",
+              rejected: "bg-red-50 border-red-200 text-red-700",
+            };
+            const statusLabels = { pending: "Pending Review", approved: "Approved", rejected: "Rejected" };
+            return (
+              <div key={req.id} className="bg-noir-elevated border border-border rounded-sm p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm">{req.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{req.organization} · {req.sector}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{req.purpose}</p>
+                    {req.rejection_reason && (
+                      <p className="text-xs text-red-600 mt-1">Reason: {req.rejection_reason}</p>
+                    )}
+                    {req.reviewed_by_name && (
+                      <p className="text-[10px] text-muted-foreground mt-1">Reviewed by {req.reviewed_by_name} on {new Date(req.reviewed_at!).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={`px-2 py-0.5 text-[10px] font-mono rounded border ${statusStyles[req.status]}`}>
+                      {statusLabels[req.status]}
+                    </span>
+                    {req.status === "approved" && (
+                      <button
+                        onClick={() => setShowSubmitForm(req.id)}
+                        className="px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-sm hover:opacity-90 transition-opacity"
+                      >
+                        Proceed to Submit →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Request form - only show if no pending request */}
+      {hasPending ? (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-sm p-6 text-center">
+          <Clock className="h-8 w-8 text-yellow-500 mx-auto mb-3" />
+          <p className="font-medium text-yellow-800">You have a pending request</p>
+          <p className="text-xs text-yellow-700 mt-1">Please wait for staff to review your current request before submitting another.</p>
+        </div>
+      ) : (
+        <form onSubmit={handleRequestSubmit} className="space-y-6">
+          <div className="bg-noir-elevated border border-border rounded-sm p-6">
+            <h3 className="font-display text-lg font-bold mb-1">Request to Submit RIA</h3>
+            <p className="text-xs text-muted-foreground mb-4">Provide details about the regulation you wish to submit for impact assessment. Staff will review and approve your request.</p>
+            <div className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <FormField label="Organization" required value={formData.organization} onChange={v => update("organization", v)} />
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+                    Organization Type <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    value={formData.organization_type}
+                    onChange={e => update("organization_type", e.target.value)}
+                    className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
+                    required
+                  >
+                    {Object.entries(RIA_ORGANIZATION_TYPE_LABELS).map(([val, label]) => (
+                      <option key={val} value={val}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <FormField label="Title of Proposed Regulation" required value={formData.title} onChange={v => update("title", v)} />
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+                  Sector <span className="text-destructive">*</span>
+                </label>
+                <select
+                  value={formData.sector}
+                  onChange={e => update("sector", e.target.value)}
+                  className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
+                  required
+                >
+                  {RIA_SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+                  Purpose / Rationale <span className="text-destructive">*</span>
+                </label>
+                <textarea
+                  value={formData.purpose}
+                  onChange={e => update("purpose", e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary resize-none"
+                  placeholder="Briefly explain the purpose and rationale of the proposed regulation..."
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full px-6 py-4 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            <Send className="h-4 w-4" />
+            {submitting ? "Submitting…" : "Submit Request"}
+          </button>
+        </form>
+      )}
+    </div>
   );
 }
 
