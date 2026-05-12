@@ -181,46 +181,61 @@ export default function News() {
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-6">
-              {selectedArticle.image_url && (
-                <div className="w-full h-56 sm:h-72 rounded-sm overflow-hidden bg-noir-elevated">
-                  <img src={selectedArticle.image_url} alt={selectedArticle.title} className="w-full h-full object-cover" />
+            <div className="p-6">
+              {/* Top Section: Image + Details Side by Side */}
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                {/* Left: Image */}
+                {selectedArticle.image_url && (
+                  <div className="w-full h-64 md:h-80 rounded-sm overflow-hidden bg-noir-elevated">
+                    <img src={selectedArticle.image_url} alt={selectedArticle.title} className="w-full h-full object-cover" />
+                  </div>
+                )}
+
+                {/* Right: Article Details */}
+                <div className="space-y-4">
+                  <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight">{selectedArticle.title}</h1>
+
+                  {selectedArticle.summary && (
+                    <p className="text-muted-foreground leading-relaxed">{selectedArticle.summary}</p>
+                  )}
+
+                  {selectedArticle.author_name && (
+                    <p className="text-xs text-muted-foreground">By {selectedArticle.author_name}</p>
+                  )}
+
+                  {selectedArticle.pdf_url && (
+                    <div className="flex flex-wrap gap-3">
+                      <a
+                        href={selectedArticle.pdf_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 text-purple-400 border border-purple-400/30 rounded-sm text-sm font-medium hover:bg-purple-500/20 transition-colors"
+                      >
+                        <Eye className="h-4 w-4" /> Preview PDF
+                      </a>
+                      <a
+                        href={selectedArticle.pdf_url}
+                        download
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 text-green-400 border border-green-400/30 rounded-sm text-sm font-medium hover:bg-green-500/20 transition-colors"
+                      >
+                        <Download className="h-4 w-4" /> Download PDF
+                        {selectedArticle.pdf_file_size && (
+                          <span className="text-xs opacity-70">({formatFileSize(selectedArticle.pdf_file_size)})</span>
+                        )}
+                      </a>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
 
-              {selectedArticle.pdf_url && (
-                <div className="flex flex-wrap gap-3">
-                  <a
-                    href={selectedArticle.pdf_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 text-purple-400 border border-purple-400/30 rounded-sm text-sm font-medium hover:bg-purple-500/20 transition-colors"
-                  >
-                    <Eye className="h-4 w-4" /> Preview PDF
-                  </a>
-                  <a
-                    href={selectedArticle.pdf_url}
-                    download
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 text-green-400 border border-green-400/30 rounded-sm text-sm font-medium hover:bg-green-500/20 transition-colors"
-                  >
-                    <Download className="h-4 w-4" /> Download PDF
-                    {selectedArticle.pdf_file_size && (
-                      <span className="text-xs opacity-70">({formatFileSize(selectedArticle.pdf_file_size)})</span>
-                    )}
-                  </a>
+              {/* Bottom Section: Scrollable Content Container */}
+              <div className="border border-border rounded-sm bg-noir-elevated p-6 max-h-96 overflow-y-auto">
+                <h3 className="text-xs font-mono uppercase tracking-wider text-primary mb-4">Article Content</h3>
+                <div className="prose prose-invert prose-sm max-w-none">
+                  {selectedArticle.content.split("\n").map((para, i) => (
+                    <p key={i} className="text-foreground/80 leading-relaxed mb-4">{para}</p>
+                  ))}
                 </div>
-              )}
-
-              <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight">{selectedArticle.title}</h1>
-
-              {selectedArticle.summary && (
-                <p className="text-muted-foreground text-lg leading-relaxed">{selectedArticle.summary}</p>
-              )}
-
-              <div className="prose prose-invert prose-sm max-w-none">
-                {selectedArticle.content.split("\n").map((para, i) => (
-                  <p key={i} className="text-foreground/80 leading-relaxed mb-4">{para}</p>
-                ))}
               </div>
 
               <button
