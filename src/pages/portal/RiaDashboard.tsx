@@ -730,125 +730,172 @@ function RequestToSubmitTab({ userId, userEmail, userName, onApprovedSubmit }: {
     );
   }
 
+  const [activeSubTab, setActiveSubTab] = useState<"request" | "history">("request");
+
   return (
     <div className="space-y-6">
-      {/* Existing requests */}
-      {loadingRequests ? (
-        <p className="text-center text-muted-foreground py-8">Loading your requests…</p>
-      ) : requests.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="font-display text-lg font-bold">Your Requests</h3>
-          {requests.map(req => {
-            const statusStyles = {
-              pending: "bg-yellow-50 border-yellow-200 text-yellow-700",
-              approved: "bg-green-50 border-green-200 text-green-700",
-              rejected: "bg-red-50 border-red-200 text-red-700",
-            };
-            const statusLabels = { pending: "Pending Review", approved: "Approved", rejected: "Rejected" };
-            return (
-              <div key={req.id} className="bg-noir-elevated border border-border rounded-sm p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">{req.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{req.organization} · {req.sector}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{req.purpose}</p>
-                    {req.rejection_reason && (
-                      <p className="text-xs text-red-600 mt-1">Reason: {req.rejection_reason}</p>
-                    )}
-                    {req.reviewed_by_name && (
-                      <p className="text-[10px] text-muted-foreground mt-1">Reviewed by {req.reviewed_by_name} on {new Date(req.reviewed_at!).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className={`px-2 py-0.5 text-[10px] font-mono rounded border ${statusStyles[req.status]}`}>
-                      {statusLabels[req.status]}
-                    </span>
-                    {req.status === "approved" && (
-                      <button
-                        onClick={() => setShowSubmitForm(req.id)}
-                        className="px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-sm hover:opacity-90 transition-opacity"
+      {/* Sub-tab switcher */}
+      <div className="flex border-b border-border">
+        <button
+          onClick={() => setActiveSubTab("request")}
+          className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${activeSubTab === "request" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <Send className="h-3.5 w-3.5 inline mr-2" />
+          New Request
+        </button>
+        <button
+          onClick={() => setActiveSubTab("history")}
+          className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${activeSubTab === "history" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <FileText className="h-3.5 w-3.5 inline mr-2" />
+          My Requests
+          {requests.length > 0 && (
+            <span className="ml-2 px-1.5 py-0.5 text-[10px] bg-primary/10 text-primary rounded-full font-semibold">{requests.length}</span>
+          )}
+        </button>
+      </div>
+
+      {/* New Request Tab */}
+      {activeSubTab === "request" && (
+        <>
+          {hasPending ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-sm p-6 text-center">
+              <Clock className="h-8 w-8 text-yellow-500 mx-auto mb-3" />
+              <p className="font-medium text-yellow-800">You have a pending request</p>
+              <p className="text-xs text-yellow-700 mt-1">Please wait for staff to review your current request before submitting another.</p>
+              <button
+                onClick={() => setActiveSubTab("history")}
+                className="mt-3 text-xs text-primary hover:underline"
+              >
+                View your requests →
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleRequestSubmit} className="space-y-6">
+              <div className="bg-noir-elevated border border-border rounded-sm p-6">
+                <h3 className="font-display text-lg font-bold mb-1">Request to Submit RIA</h3>
+                <p className="text-xs text-muted-foreground mb-4">Provide details about the regulation you wish to submit for impact assessment. Staff will review and approve your request.</p>
+                <div className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <FormField label="Organization" required value={formData.organization} onChange={v => update("organization", v)} />
+                    <div>
+                      <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+                        Organization Type <span className="text-destructive">*</span>
+                      </label>
+                      <select
+                        value={formData.organization_type}
+                        onChange={e => update("organization_type", e.target.value)}
+                        className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
+                        required
                       >
-                        Proceed to Submit →
-                      </button>
-                    )}
+                        {Object.entries(RIA_ORGANIZATION_TYPE_LABELS).map(([val, label]) => (
+                          <option key={val} value={val}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <FormField label="Title of Proposed Regulation" required value={formData.title} onChange={v => update("title", v)} />
+                  <div>
+                    <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+                      Sector <span className="text-destructive">*</span>
+                    </label>
+                    <select
+                      value={formData.sector}
+                      onChange={e => update("sector", e.target.value)}
+                      className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
+                      required
+                    >
+                      {RIA_SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+                      Purpose / Rationale <span className="text-destructive">*</span>
+                    </label>
+                    <textarea
+                      value={formData.purpose}
+                      onChange={e => update("purpose", e.target.value)}
+                      rows={4}
+                      className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary resize-none"
+                      placeholder="Briefly explain the purpose and rationale of the proposed regulation..."
+                      required
+                    />
                   </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full px-6 py-4 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                <Send className="h-4 w-4" />
+                {submitting ? "Submitting…" : "Submit Request"}
+              </button>
+            </form>
+          )}
+        </>
       )}
 
-      {/* Request form - only show if no pending request */}
-      {hasPending ? (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-sm p-6 text-center">
-          <Clock className="h-8 w-8 text-yellow-500 mx-auto mb-3" />
-          <p className="font-medium text-yellow-800">You have a pending request</p>
-          <p className="text-xs text-yellow-700 mt-1">Please wait for staff to review your current request before submitting another.</p>
-        </div>
-      ) : (
-        <form onSubmit={handleRequestSubmit} className="space-y-6">
-          <div className="bg-noir-elevated border border-border rounded-sm p-6">
-            <h3 className="font-display text-lg font-bold mb-1">Request to Submit RIA</h3>
-            <p className="text-xs text-muted-foreground mb-4">Provide details about the regulation you wish to submit for impact assessment. Staff will review and approve your request.</p>
-            <div className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <FormField label="Organization" required value={formData.organization} onChange={v => update("organization", v)} />
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
-                    Organization Type <span className="text-destructive">*</span>
-                  </label>
-                  <select
-                    value={formData.organization_type}
-                    onChange={e => update("organization_type", e.target.value)}
-                    className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
-                    required
-                  >
-                    {Object.entries(RIA_ORGANIZATION_TYPE_LABELS).map(([val, label]) => (
-                      <option key={val} value={val}>{label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <FormField label="Title of Proposed Regulation" required value={formData.title} onChange={v => update("title", v)} />
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
-                  Sector <span className="text-destructive">*</span>
-                </label>
-                <select
-                  value={formData.sector}
-                  onChange={e => update("sector", e.target.value)}
-                  className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary"
-                  required
-                >
-                  {RIA_SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
-                  Purpose / Rationale <span className="text-destructive">*</span>
-                </label>
-                <textarea
-                  value={formData.purpose}
-                  onChange={e => update("purpose", e.target.value)}
-                  rows={4}
-                  className="w-full px-4 py-3 bg-background border border-border rounded-sm text-sm focus:outline-none focus:border-primary resize-none"
-                  placeholder="Briefly explain the purpose and rationale of the proposed regulation..."
-                  required
-                />
-              </div>
+      {/* My Requests (History) Tab */}
+      {activeSubTab === "history" && (
+        <>
+          {loadingRequests ? (
+            <p className="text-center text-muted-foreground py-8">Loading your requests…</p>
+          ) : requests.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-muted-foreground text-sm">No requests yet</p>
+              <button onClick={() => setActiveSubTab("request")} className="mt-2 text-xs text-primary hover:underline">
+                Submit your first request →
+              </button>
             </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full px-6 py-4 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-          >
-            <Send className="h-4 w-4" />
-            {submitting ? "Submitting…" : "Submit Request"}
-          </button>
-        </form>
+          ) : (
+            <div className="space-y-3">
+              {requests.map(req => {
+                const statusStyles = {
+                  pending: "bg-yellow-50 border-yellow-200 text-yellow-700",
+                  approved: "bg-green-50 border-green-200 text-green-700",
+                  rejected: "bg-red-50 border-red-200 text-red-700",
+                };
+                const statusLabels = { pending: "Pending Review", approved: "Approved", rejected: "Rejected" };
+                return (
+                  <div key={req.id} className="bg-noir-elevated border border-border rounded-sm p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{req.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{req.organization} · {req.sector}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{req.purpose}</p>
+                        {req.rejection_reason && (
+                          <p className="text-xs text-red-600 mt-1">Reason: {req.rejection_reason}</p>
+                        )}
+                        {req.reviewed_by_name && (
+                          <p className="text-[10px] text-muted-foreground mt-1">Reviewed by {req.reviewed_by_name} on {new Date(req.reviewed_at!).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
+                        )}
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Submitted {new Date(req.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <span className={`px-2 py-0.5 text-[10px] font-mono rounded border ${statusStyles[req.status]}`}>
+                          {statusLabels[req.status]}
+                        </span>
+                        {req.status === "approved" && (
+                          <button
+                            onClick={() => setShowSubmitForm(req.id)}
+                            className="px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-sm hover:opacity-90 transition-opacity"
+                          >
+                            Proceed to Submit →
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
