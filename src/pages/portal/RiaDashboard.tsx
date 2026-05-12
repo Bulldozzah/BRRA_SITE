@@ -373,7 +373,7 @@ function SubmitTab({ userId, userEmail, userName, onSuccess, prefillOrganization
     return `RIA-${year}-${randomNum}`;
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -392,28 +392,8 @@ function SubmitTab({ userId, userEmail, userName, onSuccess, prefillOrganization
     }
 
     setSelectedFile(file);
-    setUploading(true);
-
-    try {
-      const fileExt = file.name.split(".").pop();
-      const trackNum = generateTrackingNumber();
-      const filePath = `${userId}/${trackNum}.${fileExt}`;
-
-      const { error } = await supabase.storage
-        .from("ria-documents")
-        .upload(filePath, file, { upsert: true });
-
-      if (error) throw error;
-
-      setDocumentPath(filePath);
-      setDocumentFilename(file.name);
-      toast.success("Document uploaded successfully.");
-    } catch (err: any) {
-      toast.error("Upload failed: " + (err.message || "Unknown error"));
-      setSelectedFile(null);
-    } finally {
-      setUploading(false);
-    }
+    setDocumentFilename(file.name);
+    toast.success("Document selected. It will be uploaded on submission.");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -426,6 +406,23 @@ function SubmitTab({ userId, userEmail, userName, onSuccess, prefillOrganization
     setSubmitting(true);
     try {
       const trackingNumber = generateTrackingNumber();
+
+      // Upload document to folder named after RIA number
+      let uploadedPath = "";
+      let uploadedFilename = "";
+      if (selectedFile) {
+        setUploading(true);
+        const sanitizedName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        uploadedPath = `${trackingNumber}/${sanitizedName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("ria-documents")
+          .upload(uploadedPath, selectedFile, { upsert: true });
+
+        if (uploadError) throw new Error("Document upload failed: " + uploadError.message);
+        uploadedFilename = selectedFile.name;
+        setUploading(false);
+      }
 
       // Insert submission
       const { data, error } = await (supabase as any)
@@ -442,8 +439,8 @@ function SubmitTab({ userId, userEmail, userName, onSuccess, prefillOrganization
           description: formData.description,
           sector: formData.sector,
           regulation_type: formData.regulation_type,
-          document_filename: documentFilename || null,
-          document_path: documentPath || null,
+          document_filename: uploadedFilename || null,
+          document_path: uploadedPath || null,
           status: "submitted",
           current_stage: 1,
           stage_name: "Submission Received",
