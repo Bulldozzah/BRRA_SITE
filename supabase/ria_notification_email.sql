@@ -7,8 +7,21 @@
 -- Enable pg_net extension (pre-installed on Supabase)
 CREATE EXTENSION IF NOT EXISTS pg_net WITH SCHEMA extensions;
 
--- Drop old function signature if it exists
-DROP FUNCTION IF EXISTS public.send_ria_notification_email(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
+-- Drop ALL existing overloaded versions of this function
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT oid::regprocedure AS func_sig
+    FROM pg_proc
+    WHERE proname = 'send_ria_notification_email'
+      AND pronamespace = 'public'::regnamespace
+  LOOP
+    EXECUTE 'DROP FUNCTION IF EXISTS ' || r.func_sig || ' CASCADE';
+  END LOOP;
+END;
+$$;
 
 -- Function to send RIA notification emails via Resend API
 CREATE OR REPLACE FUNCTION public.send_ria_notification_email(
