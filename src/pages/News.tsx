@@ -24,7 +24,7 @@ type NewsArticle = {
   created_at: string;
 };
 
-const tags = ["All", "General", "Newsletter", "Announcement", "Event"] as const;
+const tags = ["General", "Newsletter", "Announcement", "Event"] as const;
 
 const categoryColors: Record<NewsCategory, string> = {
   general: "bg-blue-500/10 text-blue-400 border-blue-400/30",
@@ -40,7 +40,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function News() {
-  const [filter, setFilter] = useState<typeof tags[number]>("All");
+  const [filter, setFilter] = useState<typeof tags[number]>("General");
   const [search, setSearch] = useState("");
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
 
@@ -58,7 +58,7 @@ export default function News() {
   });
 
   const filtered = articles.filter(a => {
-    const matchCategory = filter === "All" || a.category === filter.toLowerCase();
+    const matchCategory = a.category === filter.toLowerCase();
     const matchSearch = !search || (a.title + (a.summary || "") + a.content).toLowerCase().includes(search.toLowerCase());
     return matchCategory && matchSearch;
   });
@@ -91,7 +91,7 @@ export default function News() {
         )}
 
         {/* Featured Section */}
-        {!isLoading && featured.length > 0 && filter === "All" && !search && (
+        {!isLoading && featured.length > 0 && filter === "General" && !search && (
           <div className="mb-12">
             {featured.slice(0, 1).map(article => (
               <article
