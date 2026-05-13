@@ -224,16 +224,14 @@ export default function LeaveDashboard() {
                             {formatDate(app.application_date)}
                           </td>
                           <td className="px-4 py-3">
-                            {app.status === "approved" && (
-                              <button
-                                onClick={() => generateLeavePDF(app)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-500/10 text-green-600 border border-green-200 rounded-sm hover:bg-green-500/20 transition-colors"
-                                title="Download approved leave form as PDF"
-                              >
-                                <Download className="h-3.5 w-3.5" />
-                                PDF
-                              </button>
-                            )}
+                            <button
+                              onClick={() => generateLeavePDF(app)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary border border-primary/30 rounded-sm hover:bg-primary/20 transition-colors"
+                              title="Download leave form as PDF"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              PDF
+                            </button>
                           </td>
                         </tr>
                       ))}
