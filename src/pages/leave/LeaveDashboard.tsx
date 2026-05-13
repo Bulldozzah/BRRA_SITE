@@ -10,13 +10,18 @@ import {
 } from "lucide-react";
 import {
   LeaveApplication,
+  AnnualLeaveApplication,
   LeaveType,
   LeaveStatus,
+  AnnualLeaveStatus,
   LEAVE_TYPE_LABELS,
   LEAVE_STATUS_LABELS,
   LEAVE_STATUS_COLORS,
+  ANNUAL_LEAVE_STATUS_LABELS,
+  ANNUAL_LEAVE_STATUS_COLORS,
 } from "@/types/leave";
 import { generateLeavePDF } from "@/utils/generateLeavePDF";
+import { generateAnnualLeavePDF } from "@/utils/generateAnnualLeavePDF";
 
 export default function LeaveDashboard() {
   const { user, loading } = useAuth();
@@ -69,6 +74,24 @@ export default function LeaveDashboard() {
         .eq("year", new Date().getFullYear());
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Fetch annual leave applications
+  const { data: annualApplications = [], isLoading: annualLoading } = useQuery({
+    queryKey: ["my_annual_leave", staffProfile?.id],
+    enabled: !!staffProfile,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("annual_leave_applications")
+        .select("*, approval:annual_leave_approvals(*)")
+        .eq("employee_id", staffProfile!.id)
+        .order("application_date", { ascending: false });
+      if (error) throw error;
+      return (data || []).map((d: any) => ({
+        ...d,
+        approval: Array.isArray(d.approval) ? d.approval[0] || null : d.approval,
+      })) as AnnualLeaveApplication[];
     },
   });
 
@@ -161,11 +184,87 @@ export default function LeaveDashboard() {
               </div>
             )}
 
-            {/* Applications Table */}
+            {/* Annual Leave Applications */}
+            <div className="mb-10">
+              <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-primary" />
+                Annual Leave Applications (BRRA Form)
+              </h2>
+
+              {annualLoading ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">Loading…</p>
+              ) : annualApplications.length === 0 ? (
+                <div className="text-center py-8 bg-noir-elevated border border-border rounded-sm">
+                  <CalendarDays className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground text-sm">No annual leave applications yet.</p>
+                  <Link
+                    to="/portal/leave/annual/apply"
+                    className="inline-flex items-center gap-2 mt-3 px-4 py-2 text-sm text-primary border border-primary rounded-sm hover:bg-primary/10 transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Apply Now
+                  </Link>
+                </div>
+              ) : (
+                <div className="border border-border rounded-sm overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-noir-elevated/60 text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                      <tr>
+                        <th className="text-left px-4 py-3">Period</th>
+                        <th className="text-left px-4 py-3">Days</th>
+                        <th className="text-left px-4 py-3">Resume</th>
+                        <th className="text-left px-4 py-3">Status</th>
+                        <th className="text-left px-4 py-3 hidden sm:table-cell">Applied</th>
+                        <th className="text-left px-4 py-3">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {annualApplications.map((app) => (
+                        <tr key={app.id} className="hover:bg-noir-elevated/30 transition-colors">
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {formatDate(app.leave_start_date)}
+                          </td>
+                          <td className="px-4 py-3">
+                            {app.leave_days_applied}
+                            {app.days_commuted > 0 && (
+                              <span className="text-xs text-muted-foreground ml-1">(+{app.days_commuted} commuted)</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {formatDate(app.resume_date)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-mono rounded-sm border ${ANNUAL_LEAVE_STATUS_COLORS[app.status]}`}
+                            >
+                              {ANNUAL_LEAVE_STATUS_LABELS[app.status]}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground text-xs hidden sm:table-cell">
+                            {formatDate(app.application_date)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => generateAnnualLeavePDF(app)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary border border-primary/30 rounded-sm hover:bg-primary/20 transition-colors"
+                              title="Download annual leave form as PDF"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              PDF
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Other Leave Applications Table */}
             <div>
               <h2 className="font-display text-xl font-bold mb-4 flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-primary" />
-                Leave Applications
+                Other Leave Applications
               </h2>
 
               {appsLoading ? (
