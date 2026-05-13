@@ -54,11 +54,19 @@ export default function LeaveDashboard() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("leave_applications")
-        .select("*")
+        .select(`
+          *,
+          employee:employee_id(full_name, employee_number, department:department_id(name), position:position_id(title))
+        `)
         .eq("employee_id", staffProfile!.id)
         .order("application_date", { ascending: false });
       if (error) throw error;
-      return data as LeaveApplication[];
+      // Flatten nested department/position for PDF compatibility
+      return (data || []).map((app: any) => ({
+        ...app,
+        department: app.employee?.department || null,
+        position: app.employee?.position || null,
+      })) as LeaveApplication[];
     },
   });
 
