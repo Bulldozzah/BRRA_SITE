@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import PageLayout from "@/components/layout/PageLayout";
+import StaffLayout from "@/components/layout/StaffLayout";
 import { toast } from "sonner";
-import { CalendarDays, Send, AlertCircle, FileText, Calculator, Search, Users } from "lucide-react";
+import { CalendarDays, Send, AlertCircle, FileText, Calculator, Search, Users, ArrowLeft } from "lucide-react";
 import { loadHolidaysFromDB, isNonWorkingDay } from "@/utils/holidays";
 import { sendLeaveNotification } from "@/utils/sendLeaveNotification";
 import {
@@ -304,15 +304,23 @@ export default function AnnualLeaveApplication() {
   if (!user) return null;
 
   return (
-    <PageLayout>
-      <section className="container-wide py-16">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <p className="text-xs font-mono uppercase tracking-[0.2em] text-primary mb-3">Annual Leave Management</p>
-            <h1 className="font-display text-3xl font-bold mb-2">Annual Leave Application</h1>
-            <p className="text-muted-foreground">BRRA Annual Leave Form — Part A (Employee Application)</p>
-          </div>
+    <StaffLayout activeTab="annual-apply">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Back button */}
+        <button
+          onClick={() => navigate("/portal/dashboard")}
+          className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </button>
+
+        {/* Header */}
+        <div>
+          <p className="text-xs font-mono uppercase tracking-[0.2em] text-amber-600 mb-2">Annual Leave Management</p>
+          <h2 className="text-2xl font-bold text-gray-900">Annual Leave Application</h2>
+          <p className="text-gray-600 mt-1">BRRA Annual Leave Form — Part A (Employee Application)</p>
+        </div>
 
           {/* No staff profile warning */}
           {!profileLoading && !staffProfile && (
@@ -670,9 +678,8 @@ export default function AnnualLeaveApplication() {
               </div>
             </form>
           )}
-        </div>
-      </section>
-    </PageLayout>
+      </div>
+    </StaffLayout>
   );
 }
 

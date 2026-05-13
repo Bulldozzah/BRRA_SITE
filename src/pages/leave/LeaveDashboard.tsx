@@ -3,10 +3,10 @@ import { useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import PageLayout from "@/components/layout/PageLayout";
+import StaffLayout from "@/components/layout/StaffLayout";
 import {
   CalendarDays, Plus, Clock, CheckCircle2, XCircle, AlertCircle,
-  Calendar, TrendingUp, Download,
+  Calendar, TrendingUp, Download, ArrowLeft,
 } from "lucide-react";
 import {
   LeaveApplication,
@@ -103,25 +103,34 @@ export default function LeaveDashboard() {
   const rejected = applications.filter((a) => a.status === "rejected").length;
 
   return (
-    <PageLayout>
-      <section className="container-wide py-16">
+    <StaffLayout activeTab="my-leave">
+      <div className="space-y-6">
+        {/* Back button */}
+        <button
+          onClick={() => navigate("/portal/dashboard")}
+          className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </button>
+
         {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-6 mb-10">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-mono uppercase tracking-[0.2em] text-primary mb-3">Leave Management</p>
-            <h1 className="font-display text-4xl font-bold mb-2">My Leave</h1>
-            <p className="text-muted-foreground">View your leave history, balances, and apply for new leave.</p>
+            <p className="text-xs font-mono uppercase tracking-[0.2em] text-amber-600 mb-2">Leave Management</p>
+            <h2 className="text-2xl font-bold text-gray-900">My Leave</h2>
+            <p className="text-gray-600 mt-1">View your leave history, balances, and apply for new leave.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
               to="/portal/leave/apply"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition-colors text-sm"
             >
               <Plus className="h-4 w-4" /> Apply for Leave
             </Link>
             <Link
               to="/portal/leave/annual/apply"
-              className="inline-flex items-center gap-2 px-6 py-3 border-2 border-primary text-primary font-semibold rounded-sm hover:bg-primary hover:text-primary-foreground transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 border border-amber-600 text-amber-700 font-semibold rounded-lg hover:bg-amber-50 transition-colors text-sm"
             >
               <CalendarDays className="h-4 w-4" /> Annual Leave (BRRA Form)
             </Link>
@@ -341,8 +350,8 @@ export default function LeaveDashboard() {
             </div>
           </>
         )}
-      </section>
-    </PageLayout>
+      </div>
+    </StaffLayout>
   );
 }
 

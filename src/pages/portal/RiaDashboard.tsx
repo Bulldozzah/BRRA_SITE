@@ -4,11 +4,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import PageLayout from "@/components/layout/PageLayout";
+import StaffLayout from "@/components/layout/StaffLayout";
 import { toast } from "sonner";
 import { sendRiaNotification } from "@/utils/sendRiaNotification";
 import {
   Send, FileText, Search, Upload, CheckCircle2, Clock, Circle,
-  XCircle, AlertCircle, Eye, ChevronDown, ChevronUp,
+  XCircle, AlertCircle, Eye, ChevronDown, ChevronUp, ArrowLeft,
 } from "lucide-react";
 import {
   RiaSubmission,
@@ -27,19 +28,44 @@ import {
 
 export default function RiaDashboard() {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
 
   if (loading) return null;
+
+  const isStaff = user && (user.role === "staff" || user.role === "admin");
+
+  const content = (
+    <RiaContent
+      userId={user?.id || ""}
+      userEmail={user?.email || ""}
+      userName={user?.name || ""}
+      userRole={user?.role || ""}
+      isAuthenticated={!!user}
+    />
+  );
+
+  if (isStaff) {
+    return (
+      <StaffLayout activeTab="ria-my">
+        <div className="space-y-6">
+          {/* Back button */}
+          <button
+            onClick={() => navigate("/portal/dashboard")}
+            className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </button>
+          {content}
+        </div>
+      </StaffLayout>
+    );
+  }
 
   return (
     <PageLayout>
       <section className="py-12 container-wide">
-        <RiaContent
-          userId={user?.id || ""}
-          userEmail={user?.email || ""}
-          userName={user?.name || ""}
-          userRole={user?.role || ""}
-          isAuthenticated={!!user}
-        />
+        {content}
       </section>
     </PageLayout>
   );
