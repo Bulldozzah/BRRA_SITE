@@ -49,8 +49,8 @@ export default function AnnualLeaveApplication() {
       const { data, error } = await (supabase as any)
         .from("staff_profiles")
         .select(`
-          id, full_name, employee_number, department_id, position_id,
-          date_joined, grade_id,
+          id, full_name, employee_number, nrc_number, other_names,
+          department_id, position_id, date_joined, grade_id,
           departments:department_id(name),
           positions:position_id(title),
           grades:grade_id(name, level)
@@ -221,7 +221,7 @@ export default function AnnualLeaveApplication() {
         surname,
         other_names: otherNames,
         personnel_file_no: staffProfile.employee_number || null,
-        nrc_number: null,
+        nrc_number: (staffProfile as any).nrc_number || null,
         department: (staffProfile as any).departments?.name || "Unknown",
         position: (staffProfile as any).positions?.title || "Unknown",
         grade: (staffProfile as any).grades?.name || null,
