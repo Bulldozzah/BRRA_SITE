@@ -1,15 +1,7 @@
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { LeaveApplication, LEAVE_TYPE_LABELS, LEAVE_STATUS_LABELS } from "@/types/leave";
 import brraLogoUrl from "@/assets/brra-logo.jpg";
-
-// Extend jsPDF type for autoTable plugin
-declare module "jspdf" {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-    lastAutoTable: { finalY: number };
-  }
-}
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "—";
@@ -30,7 +22,8 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-export async function generateLeavePDF(app: LeaveApplication): Promise<void> {
+export function generateLeavePDF(app: LeaveApplication): void {
+  try {
   const doc = new jsPDF("p", "mm", "a4");
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 20;
@@ -46,8 +39,7 @@ export async function generateLeavePDF(app: LeaveApplication): Promise<void> {
   // --- HEADER ---
   // Try to load and add logo
   try {
-    const logoImg = await loadImage(brraLogoUrl);
-    doc.addImage(logoImg, "JPEG", margin, y, 18, 18);
+    doc.addImage(brraLogoUrl, "JPEG", margin, y, 18, 18);
   } catch {
     // Logo failed to load, skip it
   }
@@ -105,7 +97,7 @@ export async function generateLeavePDF(app: LeaveApplication): Promise<void> {
   const departmentName = app.department?.name || "—";
   const positionTitle = app.position?.title || "—";
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
     theme: "grid",
@@ -124,7 +116,7 @@ export async function generateLeavePDF(app: LeaveApplication): Promise<void> {
     ],
   });
 
-  y = doc.lastAutoTable.finalY + 8;
+  y = (doc as any).lastAutoTable.finalY + 8;
 
   // --- LEAVE DETAILS TABLE ---
   doc.setFontSize(11);
@@ -135,7 +127,7 @@ export async function generateLeavePDF(app: LeaveApplication): Promise<void> {
 
   const leaveTypeLabel = LEAVE_TYPE_LABELS[app.leave_type] || app.leave_type;
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
     theme: "grid",
@@ -161,7 +153,7 @@ export async function generateLeavePDF(app: LeaveApplication): Promise<void> {
     ],
   });
 
-  y = doc.lastAutoTable.finalY + 8;
+  y = (doc as any).lastAutoTable.finalY + 8;
 
   // --- LEAVE RATE & ACCRUAL ---
   if (app.leave_rate || app.days_accrued || app.last_leave_end_date || app.months_since_last_leave) {
@@ -171,7 +163,7 @@ export async function generateLeavePDF(app: LeaveApplication): Promise<void> {
     doc.text("ACCRUAL INFORMATION", margin, y);
     y += 2;
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
       theme: "grid",
@@ -200,7 +192,7 @@ export async function generateLeavePDF(app: LeaveApplication): Promise<void> {
       ],
     });
 
-    y = doc.lastAutoTable.finalY + 8;
+    y = (doc as any).lastAutoTable.finalY + 8;
   }
 
   // --- APPROVAL WORKFLOW ---
@@ -249,7 +241,7 @@ export async function generateLeavePDF(app: LeaveApplication): Promise<void> {
     approvalRows.push(["Status:", "Awaiting review", "", ""]);
   }
 
-  doc.autoTable({
+  autoTable(doc, {
     startY: y,
     margin: { left: margin, right: margin },
     theme: "grid",
@@ -265,7 +257,7 @@ export async function generateLeavePDF(app: LeaveApplication): Promise<void> {
     body: approvalRows,
   });
 
-  y = doc.lastAutoTable.finalY + 15;
+  y = (doc as any).lastAutoTable.finalY + 15;
 
   // --- SIGNATURES SECTION ---
   doc.setFontSize(11);
@@ -321,4 +313,9 @@ export async function generateLeavePDF(app: LeaveApplication): Promise<void> {
   // Save
   const fileName = `Leave_${LEAVE_TYPE_LABELS[app.leave_type]?.replace(/\s/g, "_") || app.leave_type}_${formatDate(app.start_date).replace(/\s/g, "_")}.pdf`;
   doc.save(fileName);
+
+  } catch (err: any) {
+    console.error("PDF generation error:", err);
+    alert("Failed to generate PDF: " + (err?.message || "Unknown error"));
+  }
 }
