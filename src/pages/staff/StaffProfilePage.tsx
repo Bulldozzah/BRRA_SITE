@@ -15,8 +15,10 @@ type StaffProfileData = {
   id: string;
   user_id: string | null;
   full_name: string;
+  other_names: string | null;
   email: string;
   phone: string | null;
+  nrc_number: string | null;
   employee_number: string | null;
   department_id: string | null;
   position_id: string | null;
@@ -52,7 +54,7 @@ function StaffProfileForm() {
   const cls = "w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500";
 
   const [form, setForm] = useState({
-    full_name: "", email: "", phone: "", employee_number: "",
+    full_name: "", other_names: "", email: "", phone: "", nrc_number: "", employee_number: "",
     department_id: "", position_id: "", grade_id: "",
     date_joined: "", notes: "",
   });
@@ -64,7 +66,7 @@ function StaffProfileForm() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_profiles")
-        .select("*")
+        .select("id, user_id, full_name, other_names, email, phone, nrc_number, employee_number, department_id, position_id, grade_id, date_joined, is_active, notes")
         .eq("user_id", user!.id)
         .maybeSingle();
       if (error) throw error;
@@ -104,8 +106,10 @@ function StaffProfileForm() {
     if (staffProfile) {
       setForm({
         full_name: staffProfile.full_name || "",
+        other_names: staffProfile.other_names || "",
         email: staffProfile.email || "",
         phone: staffProfile.phone || "",
+        nrc_number: staffProfile.nrc_number || "",
         employee_number: staffProfile.employee_number || "",
         department_id: staffProfile.department_id || "",
         position_id: staffProfile.position_id || "",
@@ -123,8 +127,10 @@ function StaffProfileForm() {
         .from("staff_profiles")
         .update({
           full_name: form.full_name.trim(),
+          other_names: form.other_names.trim() || null,
           email: form.email.trim(),
           phone: form.phone.trim() || null,
+          nrc_number: form.nrc_number.trim() || null,
           employee_number: form.employee_number.trim() || null,
           department_id: form.department_id || null,
           position_id: form.position_id || null,
@@ -227,6 +233,16 @@ function StaffProfileForm() {
               />
             </div>
             <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Other Names</label>
+              <input
+                type="text"
+                className={cls}
+                placeholder="First name, middle names"
+                value={form.other_names}
+                onChange={e => setForm(f => ({ ...f, other_names: e.target.value }))}
+              />
+            </div>
+            <div>
               <label className="block text-xs font-medium text-gray-700 mb-1.5">Email *</label>
               <input
                 type="email"
@@ -243,6 +259,16 @@ function StaffProfileForm() {
                 placeholder="Enter your phone number"
                 value={form.phone}
                 onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">NRC No</label>
+              <input
+                type="text"
+                className={cls}
+                placeholder="National Registration Card number"
+                value={form.nrc_number}
+                onChange={e => setForm(f => ({ ...f, nrc_number: e.target.value }))}
               />
             </div>
             <div>
