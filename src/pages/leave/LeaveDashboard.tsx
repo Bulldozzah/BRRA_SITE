@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import PageLayout from "@/components/layout/PageLayout";
 import {
   CalendarDays, Plus, Clock, CheckCircle2, XCircle, AlertCircle,
-  Calendar, TrendingUp,
+  Calendar, TrendingUp, Download,
 } from "lucide-react";
 import {
   LeaveApplication,
@@ -16,6 +16,7 @@ import {
   LEAVE_STATUS_LABELS,
   LEAVE_STATUS_COLORS,
 } from "@/types/leave";
+import { generateLeavePDF } from "@/utils/generateLeavePDF";
 
 export default function LeaveDashboard() {
   const { user, loading } = useAuth();
@@ -190,6 +191,7 @@ export default function LeaveDashboard() {
                         <th className="text-left px-4 py-3">Days</th>
                         <th className="text-left px-4 py-3">Status</th>
                         <th className="text-left px-4 py-3 hidden sm:table-cell">Applied</th>
+                        <th className="text-left px-4 py-3">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -220,6 +222,18 @@ export default function LeaveDashboard() {
                           </td>
                           <td className="px-4 py-3 text-muted-foreground text-xs hidden sm:table-cell">
                             {formatDate(app.application_date)}
+                          </td>
+                          <td className="px-4 py-3">
+                            {app.status === "approved" && (
+                              <button
+                                onClick={() => generateLeavePDF(app)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-500/10 text-green-600 border border-green-200 rounded-sm hover:bg-green-500/20 transition-colors"
+                                title="Download approved leave form as PDF"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                                PDF
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
