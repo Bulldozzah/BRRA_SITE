@@ -144,8 +144,10 @@ export type Database = {
           id: string
           user_id: string | null
           full_name: string
+          other_names: string | null
           email: string
           phone: string | null
+          nrc_number: string | null
           employee_number: string | null
           department_id: string | null
           position_id: string | null
@@ -161,8 +163,10 @@ export type Database = {
           id?: string
           user_id?: string | null
           full_name: string
+          other_names?: string | null
           email: string
           phone?: string | null
+          nrc_number?: string | null
           employee_number?: string | null
           department_id?: string | null
           position_id?: string | null
@@ -178,8 +182,10 @@ export type Database = {
           id?: string
           user_id?: string | null
           full_name?: string
+          other_names?: string | null
           email?: string
           phone?: string | null
+          nrc_number?: string | null
           employee_number?: string | null
           department_id?: string | null
           position_id?: string | null
