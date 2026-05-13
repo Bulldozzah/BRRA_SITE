@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { sendRiaNotification } from "@/utils/sendRiaNotification";
 import {
   FileText, Search, CheckCircle2, Clock, Circle, XCircle,
-  UserPlus, ArrowRight, X, Eye, History, User,
+  UserPlus, ArrowRight, X, Eye, History, User, ArrowLeft,
 } from "lucide-react";
 import {
   RiaSubmission,
@@ -436,8 +436,19 @@ function RiaManagementContent({ userId, userName }: { userId: string; userName: 
     }
   };
 
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-6">
+      {/* Back button */}
+      <button
+        onClick={() => navigate("/portal/dashboard")}
+        className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Dashboard
+      </button>
+
       {/* Header & Stats */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>

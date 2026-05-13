@@ -7,7 +7,7 @@ import StaffLayout from "@/components/layout/StaffLayout";
 import { toast } from "sonner";
 import {
   CalendarDays, Clock, CheckCircle2, XCircle, TrendingUp, Plus,
-  User, ChevronDown, ChevronUp, MessageSquare, FileText, AlertCircle,
+  User, ChevronDown, ChevronUp, MessageSquare, FileText, AlertCircle, ArrowLeft,
 } from "lucide-react";
 import {
   LeaveApplication,
@@ -40,6 +40,7 @@ export default function StaffLeavePage() {
 
 function StaffLeaveOverview() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Fetch staff profile
   const { data: staffProfile } = useQuery({
@@ -131,6 +132,15 @@ function StaffLeaveOverview() {
 
   return (
     <div className="space-y-8">
+      {/* Back button */}
+      <button
+        onClick={() => navigate("/portal/dashboard")}
+        className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Dashboard
+      </button>
+
       {/* Welcome */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>

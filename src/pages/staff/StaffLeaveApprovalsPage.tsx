@@ -7,7 +7,7 @@ import StaffLayout from "@/components/layout/StaffLayout";
 import { toast } from "sonner";
 import {
   CheckCircle2, XCircle, Clock, MessageSquare, User, Calendar,
-  FileText, ChevronDown, ChevronUp,
+  FileText, ChevronDown, ChevronUp, ArrowLeft,
 } from "lucide-react";
 import {
   LeaveApplication,
@@ -220,6 +220,15 @@ export default function StaffLeaveApprovalsPage() {
   return (
     <StaffLayout activeTab="approvals">
       <div className="space-y-6">
+        {/* Back button */}
+        <button
+          onClick={() => navigate("/portal/dashboard")}
+          className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </button>
+
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Leave Approvals</h2>
           <p className="text-gray-600 mt-1">Review, recommend and process staff leave applications.</p>

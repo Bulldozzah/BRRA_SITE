@@ -36,7 +36,7 @@ export default function StaffRiaReportsPage() {
 
   return (
     <StaffLayout activeTab="ria-reports">
-      <ReportsContent />
+      <ReportsContent navigate={navigate} />
     </StaffLayout>
   );
 }
@@ -105,7 +105,7 @@ const TAB_ACTIVE: Record<string, string> = {
 // =============================================================================
 // Main content
 // =============================================================================
-function ReportsContent() {
+function ReportsContent({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
   const [activeReport, setActiveReport] = useState<ReportId>("live-status");
   const [loadingData, setLoadingData] = useState(true);
   const [submissions, setSubmissions] = useState<RiaSubmission[]>([]);

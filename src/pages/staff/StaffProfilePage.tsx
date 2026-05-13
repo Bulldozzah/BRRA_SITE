@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import StaffLayout from "@/components/layout/StaffLayout";
 import { toast } from "sonner";
-import { UserCircle, Save, AlertCircle, CheckCircle2 } from "lucide-react";
+import { UserCircle, Save, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
 
 type Dept = { id: string; name: string };
 type Pos = { id: string; title: string; department_id: string | null };
@@ -43,12 +43,12 @@ export default function StaffProfilePage() {
 
   return (
     <StaffLayout activeTab="profile">
-      <StaffProfileForm />
+      <StaffProfileForm navigate={navigate} />
     </StaffLayout>
   );
 }
 
-function StaffProfileForm() {
+function StaffProfileForm({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const cls = "w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500";
@@ -183,6 +183,15 @@ function StaffProfileForm() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {/* Back button */}
+      <button
+        onClick={() => navigate("/portal/dashboard")}
+        className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Dashboard
+      </button>
+
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>

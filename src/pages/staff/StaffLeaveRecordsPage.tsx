@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import StaffLayout from "@/components/layout/StaffLayout";
-import { FileText, Search, Download, CalendarDays } from "lucide-react";
+import { FileText, Search, Download, CalendarDays, ArrowLeft } from "lucide-react";
 import {
   LeaveType,
   LeaveStatus,
@@ -31,16 +31,25 @@ export default function StaffLeaveRecordsPage() {
 
   return (
     <StaffLayout activeTab="records">
-      <LeaveRecordsContent />
+      <LeaveRecordsContent navigate={navigate} />
     </StaffLayout>
   );
 }
 
-function LeaveRecordsContent() {
+function LeaveRecordsContent({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
   const [activeTab, setActiveTab] = useState<"normal" | "annual">("normal");
 
   return (
     <div className="space-y-6">
+      {/* Back button */}
+      <button
+        onClick={() => navigate("/portal/dashboard")}
+        className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Dashboard
+      </button>
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Leave Records</h2>
