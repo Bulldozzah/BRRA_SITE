@@ -44,16 +44,16 @@ export function generateAnnualLeavePDF(app: AnnualLeaveApplication): void {
     doc.text("Republic of Zambia", margin + 22, y + 13);
     doc.text("www.brra.org.zm", margin + 22, y + 17);
 
-    y += 25;
+    y += 22;
 
     // Gold line
     doc.setDrawColor(...gold);
     doc.setLineWidth(0.8);
     doc.line(margin, y, pageWidth - margin, y);
-    y += 8;
+    y += 6;
 
     // --- TITLE ---
-    doc.setFontSize(18);
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...darkGray);
     doc.text("ANNUAL LEAVE APPLICATION FORM", pageWidth / 2, y, { align: "center" });
@@ -61,7 +61,7 @@ export function generateAnnualLeavePDF(app: AnnualLeaveApplication): void {
 
     // Status badge
     const statusText = ANNUAL_LEAVE_STATUS_LABELS[app.status] || app.status;
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     if (app.status === "approved") {
       doc.setTextColor(...greenColor);
@@ -70,22 +70,22 @@ export function generateAnnualLeavePDF(app: AnnualLeaveApplication): void {
     } else {
       doc.setTextColor(...gold);
     }
-    doc.text(`Status: ${statusText.toUpperCase()}`, pageWidth / 2, y + 5, { align: "center" });
-    y += 12;
+    doc.text(`Status: ${statusText.toUpperCase()}`, pageWidth / 2, y + 4, { align: "center" });
+    y += 9;
 
     // --- PART A: PERSONAL DETAILS ---
     doc.setTextColor(...darkGray);
-    doc.setFontSize(11);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.text("PART A — PERSONAL & EMPLOYMENT DETAILS", margin, y);
-    y += 2;
+    y += 1;
 
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
       theme: "grid",
-      headStyles: { fillColor: gold, textColor: [255, 255, 255], fontSize: 9, fontStyle: "bold" },
-      bodyStyles: { fontSize: 9, textColor: darkGray },
+      headStyles: { fillColor: gold, textColor: [255, 255, 255], fontSize: 8, fontStyle: "bold" },
+      bodyStyles: { fontSize: 8, textColor: darkGray, cellPadding: 1.5 },
       alternateRowStyles: { fillColor: [250, 248, 240] },
       columnStyles: {
         0: { fontStyle: "bold", cellWidth: 45 },
@@ -101,20 +101,20 @@ export function generateAnnualLeavePDF(app: AnnualLeaveApplication): void {
       ],
     });
 
-    y = (doc as any).lastAutoTable.finalY + 8;
+    y = (doc as any).lastAutoTable.finalY + 4;
 
     // --- LEAVE HISTORY ---
-    doc.setFontSize(11);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...darkGray);
     doc.text("LEAVE HISTORY", margin, y);
-    y += 2;
+    y += 1;
 
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
       theme: "grid",
-      bodyStyles: { fontSize: 9, textColor: darkGray },
+      bodyStyles: { fontSize: 8, textColor: darkGray, cellPadding: 1.5 },
       alternateRowStyles: { fillColor: [250, 248, 240] },
       columnStyles: {
         0: { fontStyle: "bold", cellWidth: 55 },
@@ -128,20 +128,20 @@ export function generateAnnualLeavePDF(app: AnnualLeaveApplication): void {
       ],
     });
 
-    y = (doc as any).lastAutoTable.finalY + 8;
+    y = (doc as any).lastAutoTable.finalY + 4;
 
     // --- LEAVE REQUEST DETAILS ---
-    doc.setFontSize(11);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...darkGray);
     doc.text("LEAVE REQUEST DETAILS", margin, y);
-    y += 2;
+    y += 1;
 
     autoTable(doc, {
       startY: y,
       margin: { left: margin, right: margin },
       theme: "grid",
-      bodyStyles: { fontSize: 9, textColor: darkGray },
+      bodyStyles: { fontSize: 8, textColor: darkGray, cellPadding: 1.5 },
       alternateRowStyles: { fillColor: [250, 248, 240] },
       columnStyles: {
         0: { fontStyle: "bold", cellWidth: 45 },
@@ -158,14 +158,14 @@ export function generateAnnualLeavePDF(app: AnnualLeaveApplication): void {
       ],
     });
 
-    y = (doc as any).lastAutoTable.finalY + 8;
+    y = (doc as any).lastAutoTable.finalY + 4;
 
     // --- APPROVAL WORKFLOW ---
-    doc.setFontSize(11);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...darkGray);
     doc.text("APPROVAL WORKFLOW", margin, y);
-    y += 2;
+    y += 1;
 
     const approval = app.approval;
     const approvalRows: string[][] = [];
@@ -237,7 +237,7 @@ export function generateAnnualLeavePDF(app: AnnualLeaveApplication): void {
       startY: y,
       margin: { left: margin, right: margin },
       theme: "grid",
-      bodyStyles: { fontSize: 9, textColor: darkGray },
+      bodyStyles: { fontSize: 8, textColor: darkGray, cellPadding: 1.5 },
       alternateRowStyles: { fillColor: [250, 248, 240] },
       columnStyles: {
         0: { fontStyle: "bold", cellWidth: 45 },
@@ -248,23 +248,17 @@ export function generateAnnualLeavePDF(app: AnnualLeaveApplication): void {
       body: approvalRows,
     });
 
-    y = (doc as any).lastAutoTable.finalY + 12;
+    y = (doc as any).lastAutoTable.finalY + 6;
 
     // --- SIGNATURES ---
-    // Check if we need a new page
-    if (y > 240) {
-      doc.addPage();
-      y = 20;
-    }
-
-    doc.setFontSize(11);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...darkGray);
     doc.text("SIGNATURES", margin, y);
-    y += 8;
+    y += 6;
 
     const sigBoxWidth = contentWidth / 4 - 3;
-    const sigBoxHeight = 28;
+    const sigBoxHeight = 22;
 
     const sigLabels = ["Employee", "Head of Department", "HR Officer", "Executive Director"];
     const sigNames = [
@@ -299,16 +293,16 @@ export function generateAnnualLeavePDF(app: AnnualLeaveApplication): void {
 
       doc.setFontSize(6);
       doc.setTextColor(...lightGray);
-      doc.text(`Date: ${sigDates[i]}`, x + 2, y + 22);
+      doc.text(`Date: ${sigDates[i]}`, x + 2, y + 18);
     }
 
-    y += sigBoxHeight + 12;
+    y += sigBoxHeight + 6;
 
     // --- FOOTER ---
     doc.setDrawColor(...gold);
     doc.setLineWidth(0.5);
     doc.line(margin, y, pageWidth - margin, y);
-    y += 5;
+    y += 4;
 
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
