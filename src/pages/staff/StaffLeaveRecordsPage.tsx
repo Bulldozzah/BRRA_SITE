@@ -183,31 +183,44 @@ function NormalLeaveTab() {
       {staffSummaryArray.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900">Leave Summary by Staff Member</h3>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {staffSummaryArray.map((staff: any, idx: number) => (
-              <div key={idx} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-gray-900">{staff.name}</p>
-                    {staff.employeeNumber && (
-                      <p className="text-xs text-gray-500">{staff.employeeNumber}</p>
-                    )}
-                  </div>
-                  <div className="bg-amber-50 border border-amber-200 rounded px-2 py-1">
-                    <p className="text-xs text-amber-600 font-medium">Total</p>
-                    <p className="text-lg font-bold text-amber-700">{staff.totalDays}</p>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  {Object.entries(staff.byType).map(([type, days]: [string, any]) => (
-                    <div key={type} className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-1.5">
-                      <span className="text-gray-700">{LEAVE_TYPE_LABELS[type as LeaveType] || type}</span>
-                      <span className="font-semibold text-gray-900">{days} days</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs uppercase text-gray-500 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left">Employee</th>
+                  <th className="px-4 py-3 text-left">Employee No.</th>
+                  <th className="px-4 py-3 text-left">Total Days</th>
+                  <th className="px-4 py-3 text-left">Leave Breakdown</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {staffSummaryArray.map((staff: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-gray-900">{staff.name}</p>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {staff.employeeNumber || "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2.5 py-1 bg-amber-50 border border-amber-200 rounded text-amber-700 font-semibold">
+                        {staff.totalDays} days
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(staff.byType).map(([type, days]: [string, any]) => (
+                          <span key={type} className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs">
+                            <span className="text-gray-600">{LEAVE_TYPE_LABELS[type as LeaveType] || type}:</span>
+                            <span className="font-semibold text-gray-900">{days}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -450,40 +463,51 @@ function AnnualLeaveTab() {
       {staffSummaryArray.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900">Annual Leave Summary by Staff Member</h3>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {staffSummaryArray.map((staff: any, idx: number) => (
-              <div key={idx} className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-gray-900">{staff.name}</p>
-                    <p className="text-xs text-gray-500">{staff.department}</p>
-                    {staff.personnelNo && (
-                      <p className="text-xs text-gray-400">File: {staff.personnelNo}</p>
-                    )}
-                  </div>
-                  <div className="bg-amber-50 border border-amber-200 rounded px-2 py-1 text-center">
-                    <p className="text-xs text-amber-600 font-medium">Total</p>
-                    <p className="text-lg font-bold text-amber-700">{staff.totalDays}</p>
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-1.5">
-                    <span className="text-gray-700">Leave Days Taken</span>
-                    <span className="font-semibold text-gray-900">{staff.totalDays} days</span>
-                  </div>
-                  {staff.totalCommuted > 0 && (
-                    <div className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-1.5">
-                      <span className="text-gray-700">Days Commuted</span>
-                      <span className="font-semibold text-gray-900">{staff.totalCommuted} days</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-1.5">
-                    <span className="text-gray-700">Applications</span>
-                    <span className="font-semibold text-gray-900">{staff.applications}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-xs uppercase text-gray-500 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left">Employee</th>
+                  <th className="px-4 py-3 text-left">Department</th>
+                  <th className="px-4 py-3 text-left">Personnel No.</th>
+                  <th className="px-4 py-3 text-left">Total Days</th>
+                  <th className="px-4 py-3 text-left">Days Commuted</th>
+                  <th className="px-4 py-3 text-left">Applications</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {staffSummaryArray.map((staff: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-gray-900">{staff.name}</p>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">
+                      {staff.department || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {staff.personnelNo || "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2.5 py-1 bg-amber-50 border border-amber-200 rounded text-amber-700 font-semibold">
+                        {staff.totalDays} days
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {staff.totalCommuted > 0 ? (
+                        <span className="font-medium">{staff.totalCommuted} days</span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2 py-1 bg-blue-50 border border-blue-200 rounded text-blue-700 font-medium text-xs">
+                        {staff.applications}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
