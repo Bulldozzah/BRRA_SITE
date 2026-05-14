@@ -166,25 +166,6 @@ export default function Index() {
               </div>
             </div>
 
-            <div className="relative">
-              <div className="absolute -inset-4 bg-gradient-gold opacity-10 blur-3xl rounded-full" />
-              <div className="relative grid grid-cols-2 gap-4">
-                {[
-                  { v: "15", l: "Stages of review" },
-                  { v: "3", l: "Tier approval" },
-                  { v: "100%", l: "Public consultation" },
-                  { v: "24/7", l: "Online tracking" },
-                ].map((s) => (
-                  <div key={s.l} className="aspect-square bg-background border border-border p-6 flex flex-col justify-between hover:border-primary/60 transition-colors group">
-                    <FileSearch className="h-6 w-6 text-primary" />
-                    <div>
-                      <div className="font-display text-4xl font-bold text-gradient-gold">{s.v}</div>
-                      <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">{s.l}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </section>
