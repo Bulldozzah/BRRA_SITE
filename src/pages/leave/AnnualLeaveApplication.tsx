@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import StaffLayout from "@/components/layout/StaffLayout";
 import { toast } from "sonner";
 import { CalendarDays, Send, AlertCircle, FileText, Calculator, Search, Users, ArrowLeft } from "lucide-react";
-import { loadHolidaysFromDB, isNonWorkingDay } from "@/utils/holidays";
+import { loadHolidaysFromDB, isNonWorkingDay, countWorkingDays } from "@/utils/holidays";
 import { sendLeaveNotification } from "@/utils/sendLeaveNotification";
 import {
   AnnualLeaveStatus,
@@ -127,36 +127,26 @@ export default function AnnualLeaveApplication() {
   const [edOpen, setEdOpen] = useState(false);
 
   // Form state - Part A
-  const [leaveDaysApplied, setLeaveDaysApplied] = useState<number>(1);
   const [daysCommuted, setDaysCommuted] = useState<number>(0);
   const [startDate, setStartDate] = useState("");
+  const [resumeDate, setResumeDate] = useState("");
   const [leaveAddress, setLeaveAddress] = useState("");
   const [signature, setSignature] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Auto-calculate leave days applied (excludes weekends + public holidays)
+  const leaveDaysApplied = useMemo(() => {
+    if (!startDate || !resumeDate) return 0;
+    const start = new Date(startDate);
+    // End of leave is the day before resume date
+    const endOfLeave = new Date(resumeDate);
+    endOfLeave.setDate(endOfLeave.getDate() - 1);
+    if (endOfLeave < start) return 0;
+    return countWorkingDays(start, endOfLeave);
+  }, [startDate, resumeDate, holidaysReady]);
+
   // Derived: total days deducted
   const totalDaysDeducted = leaveDaysApplied + daysCommuted;
-
-  // Auto-calculate resume date (excludes weekends + public holidays)
-  const resumeDate = useMemo(() => {
-    if (!startDate || leaveDaysApplied < 1) return "";
-    const start = new Date(startDate);
-    let daysToAdd = leaveDaysApplied - 1;
-    let current = new Date(start);
-    while (isNonWorkingDay(current)) {
-      current.setDate(current.getDate() + 1);
-    }
-    while (daysToAdd > 0) {
-      current.setDate(current.getDate() + 1);
-      if (!isNonWorkingDay(current)) daysToAdd--;
-    }
-    // Resume date is the next working day after leave ends
-    current.setDate(current.getDate() + 1);
-    while (isNonWorkingDay(current)) {
-      current.setDate(current.getDate() + 1);
-    }
-    return current.toISOString().split("T")[0];
-  }, [startDate, leaveDaysApplied, holidaysReady]);
 
   // Current balance
   const currentBalance = ledger?.closing_balance ?? null;
@@ -402,19 +392,48 @@ export default function AnnualLeaveApplication() {
                   Annual Leave Request
                 </h2>
                 <div className="grid sm:grid-cols-2 gap-5">
-                  {/* Days Applied */}
+                  {/* Start Date */}
                   <div>
                     <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
-                      Days Applied For *
+                      First Day of Leave *
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                      className="w-full px-4 py-3 bg-background border border-border rounded-sm focus:outline-none focus:border-primary text-sm"
+                      required
+                    />
+                  </div>
+
+                  {/* Resume Date */}
+                  <div>
+                    <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+                      Duty Resumes On *
+                    </label>
+                    <input
+                      type="date"
+                      value={resumeDate}
+                      onChange={(e) => setResumeDate(e.target.value)}
+                      min={startDate || new Date().toISOString().split("T")[0]}
+                      className="w-full px-4 py-3 bg-background border border-border rounded-sm focus:outline-none focus:border-primary text-sm"
+                      required
+                    />
+                  </div>
+
+                  {/* Days Applied (Auto-calculated, read-only) */}
+                  <div>
+                    <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+                      Days Applied For
                     </label>
                     <input
                       type="number"
-                      min={1}
-                      max={60}
                       value={leaveDaysApplied}
-                      onChange={(e) => setLeaveDaysApplied(parseInt(e.target.value) || 1)}
-                      className="w-full px-4 py-3 bg-background border border-border rounded-sm focus:outline-none focus:border-primary text-sm"
+                      readOnly
+                      className="w-full px-4 py-3 bg-muted border border-border rounded-sm text-sm cursor-not-allowed text-muted-foreground"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">Auto-calculated (excludes weekends &amp; public holidays)</p>
                     {currentBalance !== null && (
                       <p className="text-xs text-muted-foreground mt-1">
                         Available: <span className="text-primary font-semibold">{currentBalance} days</span>
@@ -461,35 +480,6 @@ export default function AnnualLeaveApplication() {
                     }`}>
                       {balanceAfter !== null ? `${balanceAfter} days` : "—"}
                     </div>
-                  </div>
-
-                  {/* Start Date */}
-                  <div>
-                    <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
-                      First Day of Leave *
-                    </label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      min={new Date().toISOString().split("T")[0]}
-                      className="w-full px-4 py-3 bg-background border border-border rounded-sm focus:outline-none focus:border-primary text-sm"
-                      required
-                    />
-                  </div>
-
-                  {/* Resume Date */}
-                  <div>
-                    <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
-                      Duty Resumes On (Auto)
-                    </label>
-                    <input
-                      type="date"
-                      value={resumeDate}
-                      readOnly
-                      className="w-full px-4 py-3 bg-muted border border-border rounded-sm text-sm cursor-not-allowed"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">Auto-calculated (excludes weekends &amp; public holidays)</p>
                   </div>
 
                   {/* Leave Address */}
@@ -669,7 +659,7 @@ export default function AnnualLeaveApplication() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || !startDate || !signature || !leaveAddress.trim() || !hodId || !hrId || !executiveDirectorId}
+                  disabled={submitting || !startDate || !resumeDate || leaveDaysApplied < 1 || !signature || !leaveAddress.trim() || !hodId || !hrId || !executiveDirectorId}
                   className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all disabled:opacity-60"
                 >
                   <Send className="h-4 w-4" />
