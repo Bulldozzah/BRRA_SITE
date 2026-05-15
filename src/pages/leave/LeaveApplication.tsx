@@ -124,28 +124,20 @@ export default function LeaveApplication() {
   // Form state
   const [leaveType, setLeaveType] = useState<LeaveType>("annual");
   const [startDate, setStartDate] = useState("");
-  const [requestedDays, setRequestedDays] = useState<number>(1);
+  const [endDate, setEndDate] = useState("");
   const [leaveAddress, setLeaveAddress] = useState("");
   const [hodId, setHodId] = useState("");
   const [executiveDirectorId, setExecutiveDirectorId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Auto-calculate end date (excludes weekends + Zambian public holidays)
-  const endDate = useMemo(() => {
-    if (!startDate || requestedDays < 1) return "";
+  // Auto-calculate number of working days (excludes weekends + Zambian public holidays)
+  const requestedDays = useMemo(() => {
+    if (!startDate || !endDate) return 0;
     const start = new Date(startDate);
-    let daysToAdd = requestedDays - 1;
-    let current = new Date(start);
-    // Skip forward if start itself is a non-working day
-    while (isNonWorkingDay(current)) {
-      current.setDate(current.getDate() + 1);
-    }
-    while (daysToAdd > 0) {
-      current.setDate(current.getDate() + 1);
-      if (!isNonWorkingDay(current)) daysToAdd--;
-    }
-    return current.toISOString().split("T")[0];
-  }, [startDate, requestedDays, holidaysReady]);
+    const end = new Date(endDate);
+    if (end < start) return 0;
+    return countWorkingDays(start, end);
+  }, [startDate, endDate, holidaysReady]);
 
   // Calculate months since last leave
   const monthsSinceLastLeave = useMemo(() => {
@@ -390,26 +382,6 @@ export default function LeaveApplication() {
                     </select>
                   </div>
 
-                  {/* Requested Days */}
-                  <div>
-                    <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
-                      Number of Days *
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={365}
-                      value={requestedDays}
-                      onChange={(e) => setRequestedDays(parseInt(e.target.value) || 1)}
-                      className="w-full px-4 py-3 bg-background border border-border rounded-sm focus:outline-none focus:border-primary text-sm"
-                    />
-                    {currentBalance !== null && leaveType === "annual" && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Balance: <span className="text-primary font-semibold">{currentBalance} days</span>
-                      </p>
-                    )}
-                  </div>
-
                   {/* Start Date */}
                   <div>
                     <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
@@ -425,18 +397,38 @@ export default function LeaveApplication() {
                     />
                   </div>
 
-                  {/* End Date (Auto-calculated) */}
+                  {/* End Date (Duty Resumed On) */}
                   <div>
                     <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
-                      Duty Resumed On (Auto)
+                      Duty Resumed On *
                     </label>
                     <input
                       type="date"
                       value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate || new Date().toISOString().split("T")[0]}
+                      className="w-full px-4 py-3 bg-background border border-border rounded-sm focus:outline-none focus:border-primary text-sm"
+                      required
+                    />
+                  </div>
+
+                  {/* Number of Days (Auto-calculated, read-only) */}
+                  <div>
+                    <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
+                      Number of Days
+                    </label>
+                    <input
+                      type="number"
+                      value={requestedDays}
                       readOnly
-                      className="w-full px-4 py-3 bg-muted border border-border rounded-sm text-sm cursor-not-allowed"
+                      className="w-full px-4 py-3 bg-muted border border-border rounded-sm text-sm cursor-not-allowed text-muted-foreground"
                     />
                     <p className="text-xs text-muted-foreground mt-1">Auto-calculated (excludes weekends &amp; public holidays)</p>
+                    {currentBalance !== null && leaveType === "annual" && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Balance: <span className="text-primary font-semibold">{currentBalance} days</span>
+                      </p>
+                    )}
                   </div>
 
                   {/* Leave Address */}
@@ -516,7 +508,7 @@ export default function LeaveApplication() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || !startDate || requestedDays < 1 || !hodId || !executiveDirectorId}
+                  disabled={submitting || !startDate || !endDate || requestedDays < 1 || !hodId || !executiveDirectorId}
                   className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all disabled:opacity-60"
                 >
                   <Send className="h-4 w-4" />

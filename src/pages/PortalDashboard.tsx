@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import PageLayout from "@/components/layout/PageLayout";
 import { useAuth } from "@/context/AuthContext";
-import { Shield, Users, FileText, LogOut, Settings, Activity, ClipboardList, CalendarDays, UserCircle, Newspaper } from "lucide-react";
+import { Shield, Users, FileText, LogOut, Settings, Activity, ClipboardList, CalendarDays, UserCircle } from "lucide-react";
 
 export default function PortalDashboard() {
   const { user, loading, logout } = useAuth();
@@ -62,7 +62,6 @@ function getCards(role: string) {
   const common = [
     { icon: FileText, title: "My Submissions", desc: "View RIA submissions and track their review status.", path: "/portal/ria" },
     { icon: Activity, title: "Recent Activity", desc: "Updates on licenses, permits and notifications.", path: "#" },
-    { icon: Newspaper, title: "News & Updates", desc: "Latest news, announcements and newsletter from BRRA.", path: "/news" },
   ];
   if (role === "admin") {
     return [
@@ -88,5 +87,4 @@ function getCards(role: string) {
     ...common,
     { icon: Settings, title: "Account Settings", desc: "Update your profile and notification preferences.", path: "#" },
   ];
-
 }

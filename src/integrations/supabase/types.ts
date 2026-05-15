@@ -789,41 +789,6 @@ export type Database = {
           { foreignKeyName: "annual_leave_distribution_leave_fkey"; columns: ["leave_id"]; referencedRelation: "annual_leave_applications"; referencedColumns: ["id"] }
         ]
       }
-      newsletter_subscribers: {
-        Row: {
-          id: string
-          user_id: string | null
-          email: string
-          name: string | null
-          is_subscribed: boolean
-          subscribed_at: string
-          unsubscribed_at: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id?: string | null
-          email: string
-          name?: string | null
-          is_subscribed?: boolean
-          subscribed_at?: string
-          unsubscribed_at?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string | null
-          email?: string
-          name?: string | null
-          is_subscribed?: boolean
-          subscribed_at?: string
-          unsubscribed_at?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          { foreignKeyName: "newsletter_subscribers_user_id_fkey"; columns: ["user_id"]; referencedRelation: "users"; referencedColumns: ["id"] }
-        ]
-      }
     }
     Views: {
       [_ in never]: never

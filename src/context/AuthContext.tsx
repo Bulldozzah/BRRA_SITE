@@ -100,16 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) return { ok: false, error: error.message };
       if (!data.user) return { ok: false, error: "Registration failed" };
 
-      // Auto-subscribe to newsletter
-      try {
-        await (supabase as any).from("newsletter_subscribers").upsert(
-          { user_id: data.user.id, email, name, is_subscribed: true },
-          { onConflict: "email" }
-        );
-      } catch {
-        // Non-critical - don't block registration if newsletter subscribe fails
-      }
-
       // No session = email confirmation required
       if (!data.session) {
         return { ok: true, needsEmailConfirmation: true };
