@@ -1,9 +1,18 @@
+// Supabase Edge Function: send-newsletter-email
+// Sends newsletter notification emails to subscribers when news is published.
+//
+// Deploy with: supabase functions deploy send-newsletter-email
+// Set secrets: supabase secrets set RESEND_API_KEY=re_... SMTP_FROM=noreply@brra.org.zm
+//
+// Uses the same email settings as send-leave-notification
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const FROM_EMAIL = "BRRA News <news@brra.org.zm>";
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
+const SMTP_FROM = Deno.env.get("SMTP_FROM") || "noreply@brra.org.zm";
 
 serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       headers: {
@@ -19,7 +28,7 @@ serve(async (req) => {
     if (!to || !articleTitle) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       });
     }
 
@@ -29,60 +38,91 @@ serve(async (req) => {
       year: "numeric",
     });
 
+    const subject = `BRRA News: ${articleTitle}`;
+
     const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #b8860b, #d4a017); padding: 20px; border-radius: 8px 8px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">BRRA News Update</h1>
-          <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Business Regulatory Review Agency</p>
-        </div>
-        <div style="border: 1px solid #e5e7eb; border-top: none; padding: 30px; border-radius: 0 0 8px 8px;">
-          <p style="color: #374151; font-size: 16px;">Hi ${subscriberName},</p>
-          <p style="color: #6b7280; font-size: 14px;">A new article has been published on the BRRA website:</p>
-          <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0;">
-            <span style="display: inline-block; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; text-transform: uppercase; font-weight: 600; margin-bottom: 8px;">${articleCategory}</span>
-            <h2 style="color: #111827; margin: 8px 0; font-size: 20px;">${articleTitle}</h2>
-            ${articleSummary ? `<p style="color: #6b7280; font-size: 14px; margin: 8px 0 0 0;">${articleSummary}</p>` : ""}
-            <p style="color: #9ca3af; font-size: 12px; margin: 12px 0 0 0;">Published on ${formattedDate}</p>
-          </div>
-          <a href="https://brra.org.zm/news" style="display: inline-block; background: #b8860b; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">Read Full Article</a>
-          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
-          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-            You're receiving this because you subscribed to the BRRA newsletter.<br/>
-            To unsubscribe, sign in to your account and manage your subscription on the News page.
-          </p>
-        </div>
-      </div>
-    `;
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
+    .header { background: #b8860b; color: white; padding: 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 20px; }
+    .header p { margin: 5px 0 0 0; font-size: 13px; opacity: 0.9; }
+    .content { padding: 24px; }
+    .article-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 20px; margin: 16px 0; }
+    .category { display: inline-block; background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+    .article-title { color: #111827; margin: 8px 0; font-size: 20px; }
+    .article-summary { color: #6b7280; font-size: 14px; margin: 8px 0 0 0; }
+    .article-date { color: #9ca3af; font-size: 12px; margin: 12px 0 0 0; }
+    .btn { display: inline-block; background: #b8860b; color: white; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 14px; }
+    .footer { padding: 16px 24px; background: #f5f5f5; text-align: center; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>BRRA News Update</h1>
+    <p>Business Regulatory Review Agency</p>
+  </div>
+  <div class="content">
+    <p>Dear ${subscriberName},</p>
+    <p>A new article has been published on the BRRA website:</p>
+    <div class="article-box">
+      <span class="category">${articleCategory}</span>
+      <h2 class="article-title">${articleTitle}</h2>
+      ${articleSummary ? `<p class="article-summary">${articleSummary}</p>` : ""}
+      <p class="article-date">Published on ${formattedDate}</p>
+    </div>
+    <a href="https://brra.org.zm/news" class="btn">Read Full Article</a>
+  </div>
+  <div class="footer">
+    <p>Business Regulatory Review Agency (BRRA)</p>
+    <p>You're receiving this because you subscribed to the BRRA newsletter.<br/>
+    To unsubscribe, sign in to your account and manage your subscription on the News page.</p>
+  </div>
+</body>
+</html>`;
 
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: [to],
-        subject: `BRRA News: ${articleTitle}`,
-        html: htmlBody,
-      }),
-    });
+    if (RESEND_API_KEY) {
+      // Send via Resend API (same as send-leave-notification)
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: SMTP_FROM,
+          to: [to],
+          subject,
+          html: htmlBody,
+        }),
+      });
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      return new Response(JSON.stringify({ error: errorText }), {
+      if (!res.ok) {
+        const errorText = await res.text();
+        return new Response(JSON.stringify({ error: errorText }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      });
+    } else {
+      // No email provider configured — log for debugging
+      console.log(`[EMAIL NOT SENT - No provider configured] To: ${to}, Subject: ${subject}`);
+      return new Response(JSON.stringify({ error: "No email provider configured (set RESEND_API_KEY)" }), {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       });
     }
-
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err?.message || "Internal error" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
     });
   }
 });
