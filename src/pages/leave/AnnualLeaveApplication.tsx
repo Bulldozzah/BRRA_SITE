@@ -182,6 +182,11 @@ export default function AnnualLeaveApplication() {
       if (!hrStaff?.user_id) throw new Error("Selected HR Officer does not have a linked portal account.");
       if (!edStaff?.user_id) throw new Error("Selected Executive Director does not have a linked portal account.");
 
+      // Business rule: Total Days Deducted must be exactly 30
+      if (totalDaysDeducted !== 30) {
+        throw new Error(`Annual leave must be exactly 30 days. Current total: ${totalDaysDeducted} days (${leaveDaysApplied} applied + ${daysCommuted} commuted).`);
+      }
+
       // Business rule: sufficient balance
       if (currentBalance !== null && totalDaysDeducted > currentBalance) {
         throw new Error(`Insufficient leave balance. You have ${currentBalance} days remaining.`);
@@ -462,12 +467,23 @@ export default function AnnualLeaveApplication() {
                   {/* Total Days Deducted */}
                   <div>
                     <label className="block text-xs font-mono uppercase tracking-wider text-primary mb-2">
-                      Total Days Deducted
+                      Total Days Deducted *
                     </label>
-                    <div className="px-4 py-3 bg-muted border border-border rounded-sm text-sm font-bold text-primary">
+                    <div className={`px-4 py-3 border rounded-sm text-sm font-bold ${
+                      totalDaysDeducted === 30 
+                        ? "bg-green-50 border-green-500 text-green-700" 
+                        : "bg-red-50 border-red-500 text-red-700"
+                    }`}>
                       {totalDaysDeducted} days
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">Applied + Commuted</p>
+                    <p className={`text-xs font-semibold mt-1 ${
+                      totalDaysDeducted === 30 ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {totalDaysDeducted === 30 
+                        ? "✓ Annual leave must be exactly 30 days" 
+                        : "⚠ Annual leave must be exactly 30 days"}
+                    </p>
                   </div>
 
                   {/* Balance After */}
@@ -659,7 +675,7 @@ export default function AnnualLeaveApplication() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || !startDate || !resumeDate || leaveDaysApplied < 1 || !signature || !leaveAddress.trim() || !hodId || !hrId || !executiveDirectorId}
+                  disabled={submitting || !startDate || !resumeDate || leaveDaysApplied < 1 || totalDaysDeducted !== 30 || !signature || !leaveAddress.trim() || !hodId || !hrId || !executiveDirectorId}
                   className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all disabled:opacity-60"
                 >
                   <Send className="h-4 w-4" />
