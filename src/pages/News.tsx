@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import PageLayout from "@/components/layout/PageLayout";
 import PageHero from "@/components/sections/PageHero";
 import heroNews from "@/assets/hero-news.jpg";
-import { Calendar, Search, FileText, ArrowUpRight, X, Download, Eye } from "lucide-react";
+import { Calendar, Search, FileText, ArrowUpRight, X, Download, Eye, Mail, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 type NewsCategory = "general" | "newsletter" | "announcement" | "event";
 
@@ -40,9 +43,12 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function News() {
+  const { user } = useAuth();
   const [filter, setFilter] = useState<typeof tags[number]>("General");
   const [search, setSearch] = useState("");
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
+  const [subscribeEmail, setSubscribeEmail] = useState("");
+  const [subscribeName, setSubscribeName] = useState("");
 
   const { data: articles = [], isLoading } = useQuery({
     queryKey: ["public_news"],
@@ -134,6 +140,35 @@ export default function News() {
         )}
       </section>
 
+      {/* Newsletter Signup Section */}
+      <section className="py-16 bg-noir-elevated border-t border-border">
+        <div className="container-wide">
+          <div className="max-w-2xl mx-auto text-center">
+            <Mail className="h-10 w-10 text-primary mx-auto mb-4" />
+            <h2 className="font-display text-3xl font-bold mb-3">Stay Informed</h2>
+            <p className="text-muted-foreground mb-8">
+              Subscribe to our newsletter to receive the latest news, announcements, and updates from BRRA directly in your inbox.
+            </p>
+            {user ? (
+              <NewsletterToggle userId={user.id} email={user.email} name={user.name} />
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">Create an account to subscribe to our newsletter.</p>
+                <Link
+                  to="/portal/register"
+                  className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all"
+                >
+                  <Mail className="h-4 w-4" /> Sign Up for Newsletter
+                </Link>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Already have an account? <Link to="/portal/login" className="text-primary hover:underline">Sign in</Link> to manage your subscription.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Article Modal */}
       {selectedArticle && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-6 sm:pt-12 bg-black/70 overflow-y-auto" onClick={() => setSelectedArticle(null)}>
@@ -217,5 +252,96 @@ export default function News() {
         </div>
       )}
     </PageLayout>
+  );
+}
+
+function NewsletterToggle({ userId, email, name }: { userId: string; email: string; name: string }) {
+  const { data: subscription, isLoading, refetch } = useQuery({
+    queryKey: ["newsletter_subscription", userId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("newsletter_subscribers")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const subscribeMutation = useMutation({
+    mutationFn: async () => {
+      if (subscription) {
+        // Re-subscribe
+        const { error } = await (supabase as any)
+          .from("newsletter_subscribers")
+          .update({ is_subscribed: true, unsubscribed_at: null })
+          .eq("id", subscription.id);
+        if (error) throw error;
+      } else {
+        // First-time subscribe
+        const { error } = await (supabase as any)
+          .from("newsletter_subscribers")
+          .insert({ user_id: userId, email, name });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("You're subscribed to the BRRA newsletter!");
+      refetch();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const unsubscribeMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await (supabase as any)
+        .from("newsletter_subscribers")
+        .update({ is_subscribed: false, unsubscribed_at: new Date().toISOString() })
+        .eq("id", subscription.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("You've unsubscribed from the newsletter.");
+      refetch();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Loading...</p>;
+
+  const isSubscribed = subscription?.is_subscribed === true;
+
+  return (
+    <div className="space-y-4">
+      {isSubscribed ? (
+        <>
+          <div className="inline-flex items-center gap-2 text-green-400">
+            <CheckCircle2 className="h-5 w-5" />
+            <span className="font-semibold">You're subscribed!</span>
+          </div>
+          <p className="text-sm text-muted-foreground">You'll receive email updates when new content is published.</p>
+          <button
+            onClick={() => unsubscribeMutation.mutate()}
+            disabled={unsubscribeMutation.isPending}
+            className="inline-flex items-center gap-2 px-6 py-2.5 border border-border text-sm font-medium rounded-sm hover:border-destructive hover:text-destructive transition-colors"
+          >
+            {unsubscribeMutation.isPending ? "Unsubscribing..." : "Unsubscribe"}
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground">Click below to subscribe and receive news updates via email.</p>
+          <button
+            onClick={() => subscribeMutation.mutate()}
+            disabled={subscribeMutation.isPending}
+            className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all"
+          >
+            <Mail className="h-4 w-4" />
+            {subscribeMutation.isPending ? "Subscribing..." : "Subscribe to Newsletter"}
+          </button>
+        </>
+      )}
+    </div>
   );
 }

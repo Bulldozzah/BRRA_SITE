@@ -5,9 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { toast } from "sonner";
+import { sendNewsletterNotification } from "@/utils/sendNewsletterNotification";
 import {
   Plus, Pencil, Trash2, X, Newspaper, Eye, EyeOff, Star,
-  FileText, Image as ImageIcon, Calendar, Upload,
+  FileText, Image as ImageIcon, Calendar, Upload, Mail,
 } from "lucide-react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -93,6 +94,7 @@ function NewsManager({ user }: { user: { id: string; name: string } }) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [sendNotification, setSendNotification] = useState(true);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
@@ -108,8 +110,10 @@ function NewsManager({ user }: { user: { id: string; name: string } }) {
     },
   });
 
+  const [notifying, setNotifying] = useState(false);
+
   const createMutation = useMutation({
-    mutationFn: async (payload: typeof form) => {
+    mutationFn: async (payload: typeof form & { _sendNotification?: boolean }) => {
       const { error } = await supabase.from("news").insert({
         title: payload.title,
         summary: payload.summary || null,
@@ -125,10 +129,33 @@ function NewsManager({ user }: { user: { id: string; name: string } }) {
         published_at: payload.is_published ? new Date().toISOString() : null,
       });
       if (error) throw error;
+      return payload;
     },
-    onSuccess: () => {
+    onSuccess: async (payload) => {
       qc.invalidateQueries({ queryKey: ["admin_news"] });
       toast.success("Article created");
+      // Send newsletter notification if published and user opted to notify
+      if (payload.is_published && (payload as any)._sendNotification) {
+        setNotifying(true);
+        try {
+          const result = await sendNewsletterNotification({
+            title: payload.title,
+            summary: payload.summary || null,
+            category: payload.category,
+            published_at: new Date().toISOString(),
+          });
+          if (result.sent > 0) {
+            toast.success(`Newsletter sent to ${result.sent} subscriber${result.sent !== 1 ? "s" : ""}`);
+          }
+          if (result.errors > 0) {
+            toast.error(`Failed to send to ${result.errors} subscriber${result.errors !== 1 ? "s" : ""}`);
+          }
+        } catch {
+          toast.error("Failed to send newsletter notifications");
+        } finally {
+          setNotifying(false);
+        }
+      }
       resetForm();
     },
     onError: (e: any) => toast.error(e.message),
@@ -224,7 +251,7 @@ function NewsManager({ user }: { user: { id: string; name: string } }) {
       if (editingId) {
         updateMutation.mutate({ id: editingId, payload });
       } else {
-        createMutation.mutate(payload);
+        createMutation.mutate({ ...payload, _sendNotification: sendNotification });
       }
     } catch (err: any) {
       toast.error("Upload failed: " + (err.message || "Unknown error"));
@@ -407,6 +434,19 @@ function NewsManager({ user }: { user: { id: string; name: string } }) {
                   />
                   <span className="text-sm text-gray-700">Feature on home page</span>
                 </label>
+                {!editingId && form.is_published && (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sendNotification}
+                      onChange={e => setSendNotification(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    <span className="text-sm text-gray-700 flex items-center gap-1">
+                      <Mail className="h-3.5 w-3.5 text-green-600" /> Notify subscribers
+                    </span>
+                  </label>
+                )}
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                 <button type="button" onClick={resetForm} className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
