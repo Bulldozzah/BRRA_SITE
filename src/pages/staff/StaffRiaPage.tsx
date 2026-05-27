@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { sendRiaNotification } from "@/utils/sendRiaNotification";
 import {
   FileText, Search, CheckCircle2, Clock, Circle, XCircle,
   UserPlus, ArrowRight, X, Eye, History, User, ArrowLeft,
+  Download, Upload,
 } from "lucide-react";
 import {
   RiaSubmission,
@@ -706,6 +707,7 @@ function RiaManagementContent({ userId, userName }: { userId: string; userName: 
           submission={selectedSubmission}
           stageHistory={stageHistory}
           userId={userId}
+          userName={userName}
           onClose={() => setShowDetailModal(false)}
           onUpdateStage={handleUpdateStage}
           onAssignToMe={handleAssignToMe}
@@ -713,6 +715,16 @@ function RiaManagementContent({ userId, userName }: { userId: string; userName: 
           onReject={handleReject}
           onOpenAssign={() => { setShowDetailModal(false); openAssignModal(selectedSubmission); }}
           onOpenHistory={() => { setShowDetailModal(false); openHistoryModal(selectedSubmission); }}
+          onDocumentUpdated={async (updated) => {
+            setSelectedSubmission(updated);
+            refreshData();
+            const { data } = await (supabase as any)
+              .from("ria_stage_history")
+              .select("*")
+              .eq("submission_id", updated.id)
+              .order("created_at", { ascending: true });
+            setStageHistory(data || []);
+          }}
         />
       )}
 
@@ -805,10 +817,11 @@ function RiaManagementContent({ userId, userName }: { userId: string; userName: 
 // =============================================================================
 // Detail/Manage Modal
 // =============================================================================
-function DetailModal({ submission, stageHistory, userId, onClose, onUpdateStage, onAssignToMe, onSaveNotes, onReject, onOpenAssign, onOpenHistory }: {
+function DetailModal({ submission, stageHistory, userId, userName, onClose, onUpdateStage, onAssignToMe, onSaveNotes, onReject, onOpenAssign, onOpenHistory, onDocumentUpdated }: {
   submission: RiaSubmission;
   stageHistory: RiaStageHistory[];
   userId: string;
+  userName: string;
   onClose: () => void;
   onUpdateStage: (sub: RiaSubmission, stage: number) => void;
   onAssignToMe: (sub: RiaSubmission) => void;
@@ -816,6 +829,7 @@ function DetailModal({ submission, stageHistory, userId, onClose, onUpdateStage,
   onReject: (sub: RiaSubmission) => void;
   onOpenAssign: () => void;
   onOpenHistory: () => void;
+  onDocumentUpdated: (updated: RiaSubmission) => void;
 }) {
   const { daysElapsed, daysRemaining } = getDaysInfo(submission.created_at);
   const urgencyClass = submission.status === "completed" || submission.status === "rejected"
@@ -872,13 +886,14 @@ function DetailModal({ submission, stageHistory, userId, onClose, onUpdateStage,
             <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">{submission.description}</p>
           </div>
 
-          {/* Document */}
-          {submission.document_filename && (
-            <div className="flex items-center gap-2 text-sm bg-gray-50 rounded-lg p-3">
-              <FileText className="h-4 w-4 text-amber-600" />
-              <span className="text-gray-700 font-medium">{submission.document_filename}</span>
-            </div>
-          )}
+          {/* Document — download current + upload replacement */}
+          <DocumentSection
+            submission={submission}
+            userId={userId}
+            userName={userName}
+            canUpload={isAssignedOfficer && isActive}
+            onDocumentUpdated={onDocumentUpdated}
+          />
 
           {/* Buttons row */}
           {isActive && (
@@ -1030,6 +1045,156 @@ function FinalReportSection({ submission, onSaveNotes }: { submission: RiaSubmis
           {saving ? "Saving…" : "Save Report"}
         </button>
       </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// Document Section — download current document + upload a replacement
+// The uploaded file becomes the latest document at the current stage.
+// =============================================================================
+function DocumentSection({ submission, userId, userName, canUpload, onDocumentUpdated }: {
+  submission: RiaSubmission;
+  userId: string;
+  userName: string;
+  canUpload: boolean;
+  onDocumentUpdated: (updated: RiaSubmission) => void;
+}) {
+  const [downloading, setDownloading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDownload = async () => {
+    if (!submission.document_path) return;
+    setDownloading(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from("ria-documents")
+        .download(submission.document_path);
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = submission.document_filename || "ria-document";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to download document.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleUploadClick = () => fileInputRef.current?.click();
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const stageNum = submission.current_stage;
+      const timestamp = Date.now();
+      // Versioned path so storage history is preserved; submission row points to latest
+      const newPath = `${submission.tracking_number}/stage-${stageNum}-${timestamp}-${sanitizedName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("ria-documents")
+        .upload(newPath, file, { upsert: false });
+      if (uploadError) throw new Error("Upload failed: " + uploadError.message);
+
+      const { data: updated, error: updateError } = await (supabase as any)
+        .from("ria_submissions")
+        .update({
+          document_filename: file.name,
+          document_path: newPath,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", submission.id)
+        .select()
+        .single();
+      if (updateError) throw updateError;
+
+      // Log the document replacement in stage history (at current stage)
+      await (supabase as any).from("ria_stage_history").insert({
+        submission_id: submission.id,
+        stage_number: stageNum,
+        stage_name: submission.stage_name,
+        notes: `Document updated at Stage ${stageNum}: ${file.name}`,
+        acted_by: userId,
+        acted_by_name: userName,
+      });
+
+      toast.success("Document uploaded. It is now the latest at this stage.");
+      onDocumentUpdated(updated as RiaSubmission);
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const hasDocument = !!submission.document_path;
+
+  return (
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <FileText className="h-4 w-4 text-amber-600 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-gray-500 uppercase">Document</p>
+            {hasDocument ? (
+              <p className="text-sm text-gray-800 font-medium truncate" title={submission.document_filename || ""}>
+                {submission.document_filename}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-400 italic">No document attached</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {hasDocument && (
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            >
+              <Download className="h-3.5 w-3.5" />
+              {downloading ? "Downloading…" : "Download"}
+            </button>
+          )}
+          {canUpload && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <button
+                onClick={handleUploadClick}
+                disabled={uploading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50"
+                title={hasDocument ? "Replace document with a new one" : "Upload document"}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                {uploading ? "Uploading…" : hasDocument ? "Replace" : "Upload"}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      {canUpload && hasDocument && (
+        <p className="text-[10px] text-gray-400 mt-2">
+          Uploading a new file replaces the current document. The previous file is kept in storage for audit purposes.
+        </p>
+      )}
     </div>
   );
 }
