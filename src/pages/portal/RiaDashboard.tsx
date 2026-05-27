@@ -733,11 +733,11 @@ function RequestToSubmitTab({ userId, userEmail, userName, onApprovedSubmit }: {
           .eq("is_active", true);
 
         if (notifRecipients && notifRecipients.length > 0) {
-          // Use the same notification_type that works for the requester confirmation,
-          // so staff get an email via the existing deployed function (no new SQL needed).
+          // Staff get an "Action Required" email distinct from the requester confirmation.
+          // Requires the updated send_ria_notification_email SQL function to be deployed.
           await sendRiaNotification({
             ...emailBase,
-            notification_type: "request_submitted",
+            notification_type: "request_submitted_staff",
             recipients: notifRecipients.map((r: { name: string; email: string }) => ({
               name: r.name,
               email: r.email,
