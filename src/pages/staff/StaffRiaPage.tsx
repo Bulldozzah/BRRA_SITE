@@ -140,13 +140,13 @@ function RiaManagementContent({ userId, userName }: { userId: string; userName: 
 
       // Send approval email to user
       if (req) {
-        sendRiaNotification({
-          recipient_name: req.user_name,
-          recipient_email: req.user_email,
+        await sendRiaNotification({
           notification_type: "request_approved",
           ria_title: req.title,
           organization: req.organization,
           reviewer_name: userName,
+          requester_name: req.user_name,
+          recipients: [{ name: req.user_name, email: req.user_email, role: "Requester" }],
         });
       }
 
@@ -174,14 +174,14 @@ function RiaManagementContent({ userId, userName }: { userId: string; userName: 
 
       // Send rejection email to user
       if (req) {
-        sendRiaNotification({
-          recipient_name: req.user_name,
-          recipient_email: req.user_email,
+        await sendRiaNotification({
           notification_type: "request_rejected",
           ria_title: req.title,
           organization: req.organization,
           reviewer_name: userName,
+          requester_name: req.user_name,
           rejection_reason: rejectionReason || undefined,
+          recipients: [{ name: req.user_name, email: req.user_email, role: "Requester" }],
         });
       }
 

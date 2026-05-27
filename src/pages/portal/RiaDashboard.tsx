@@ -488,14 +488,18 @@ function SubmitTab({ userId, userEmail, userName, onSuccess, prefillOrganization
         });
 
       // Send email with tracking number
-      sendRiaNotification({
-        recipient_name: formData.submitter_name,
-        recipient_email: formData.submitter_email,
-        notification_type: "ria_submitted",
-        ria_title: formData.title,
-        organization: formData.organization,
-        tracking_number: trackingNumber,
-      });
+      try {
+        await sendRiaNotification({
+          notification_type: "ria_submitted",
+          ria_title: formData.title,
+          organization: formData.organization,
+          tracking_number: trackingNumber,
+          requester_name: formData.submitter_name,
+          recipients: [{ name: formData.submitter_name, email: formData.submitter_email, role: "Requester" }],
+        });
+      } catch {
+        console.warn("[RIA Email] Confirmation email could not be sent.");
+      }
 
       toast.success(`Submission successful! Tracking number: ${trackingNumber}`);
 
@@ -708,31 +712,39 @@ function RequestToSubmitTab({ userId, userEmail, userName, onApprovedSubmit }: {
         });
       if (error) throw error;
 
-      // Send confirmation email to the requester
-      sendRiaNotification({
-        recipient_name: userName,
-        recipient_email: userEmail,
-        notification_type: "request_submitted",
+      const emailBase = {
         ria_title: formData.title,
         organization: formData.organization,
-      });
+        requester_name: userName,
+      };
 
-      // Notify all active RIA notification recipients (admin-configured list)
-      const { data: notifRecipients } = await (supabase as any)
-        .from("ria_notification_recipients")
-        .select("name, email")
-        .eq("is_active", true);
+      try {
+        // Confirm to requester: your request is under review
+        await sendRiaNotification({
+          ...emailBase,
+          notification_type: "request_submitted",
+          recipients: [{ name: userName, email: userEmail, role: "Requester" }],
+        });
 
-      if (notifRecipients && notifRecipients.length > 0) {
-        for (const recipient of notifRecipients) {
-          sendRiaNotification({
-            recipient_name: recipient.name,
-            recipient_email: recipient.email,
-            notification_type: "request_submitted",
-            ria_title: formData.title,
-            organization: formData.organization,
+        // Notify all active staff recipients (action required)
+        const { data: notifRecipients } = await (supabase as any)
+          .from("ria_notification_recipients")
+          .select("name, email")
+          .eq("is_active", true);
+
+        if (notifRecipients && notifRecipients.length > 0) {
+          await sendRiaNotification({
+            ...emailBase,
+            notification_type: "request_submitted_staff",
+            recipients: notifRecipients.map((r: { name: string; email: string }) => ({
+              name: r.name,
+              email: r.email,
+              role: "BRRA Staff",
+            })),
           });
         }
+      } catch {
+        console.warn("[RIA Email] Notification could not be sent.");
       }
 
       toast.success("Request submitted! You will receive an email confirmation. Staff will review your request.");
