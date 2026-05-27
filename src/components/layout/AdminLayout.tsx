@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   Shield, LogOut, Building2, GraduationCap, Briefcase, Users, UserCog,
   LayoutDashboard, Menu, PanelLeftClose, Bell, ExternalLink, ChevronRight, Newspaper, FolderOpen, CalendarDays,
-  CalendarPlus, ClipboardCheck,
+  CalendarPlus, ClipboardCheck, FileSearch,
 } from "lucide-react";
 
 type NavItem = {
@@ -24,6 +24,7 @@ const navItems: NavItem[] = [
   { id: "staff", label: "Staff Profiles", icon: Users, path: "/portal/admin/staff" },
   { id: "users", label: "User Management", icon: UserCog, path: "/portal/admin/users" },
   { id: "leave", label: "Leave Management", icon: CalendarDays, path: "/portal/admin/leave" },
+  { id: "ria-notifications", label: "RIA Notifications", icon: FileSearch, path: "/portal/admin/ria-notifications" },
 ];
 
 const myLeaveItems: NavItem[] = [

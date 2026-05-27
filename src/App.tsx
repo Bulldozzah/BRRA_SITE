@@ -31,6 +31,7 @@ import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminNewsPage from "./pages/admin/AdminNewsPage";
 import AdminDocumentsPage from "./pages/admin/AdminDocumentsPage";
 import AdminLeavePage from "./pages/admin/AdminLeavePage";
+import AdminRiaNotificationsPage from "./pages/admin/AdminRiaNotificationsPage";
 import LeaveDashboard from "./pages/leave/LeaveDashboard";
 import LeaveApplication from "./pages/leave/LeaveApplication";
 import LeaveApprovals from "./pages/leave/LeaveApprovals";
@@ -85,6 +86,7 @@ const App = () => (
           <Route path="/portal/admin/news" element={<AdminNewsPage />} />
           <Route path="/portal/admin/documents" element={<AdminDocumentsPage />} />
           <Route path="/portal/admin/leave" element={<AdminLeavePage />} />
+          <Route path="/portal/admin/ria-notifications" element={<AdminRiaNotificationsPage />} />
           <Route path="/portal/leave" element={<LeaveDashboard />} />
           <Route path="/portal/leave/apply" element={<LeaveApplication />} />
           <Route path="/portal/leave/approvals" element={<LeaveApprovals />} />

@@ -708,7 +708,7 @@ function RequestToSubmitTab({ userId, userEmail, userName, onApprovedSubmit }: {
         });
       if (error) throw error;
 
-      // Send confirmation email - request under review
+      // Send confirmation email to the requester
       sendRiaNotification({
         recipient_name: userName,
         recipient_email: userEmail,
@@ -716,6 +716,24 @@ function RequestToSubmitTab({ userId, userEmail, userName, onApprovedSubmit }: {
         ria_title: formData.title,
         organization: formData.organization,
       });
+
+      // Notify all active RIA notification recipients (admin-configured list)
+      const { data: notifRecipients } = await (supabase as any)
+        .from("ria_notification_recipients")
+        .select("name, email")
+        .eq("is_active", true);
+
+      if (notifRecipients && notifRecipients.length > 0) {
+        for (const recipient of notifRecipients) {
+          sendRiaNotification({
+            recipient_name: recipient.name,
+            recipient_email: recipient.email,
+            notification_type: "request_submitted",
+            ria_title: formData.title,
+            organization: formData.organization,
+          });
+        }
+      }
 
       toast.success("Request submitted! You will receive an email confirmation. Staff will review your request.");
       setFormData({ organization: "", organization_type: "other", title: "", purpose: "", sector: RIA_SECTORS[0] });
