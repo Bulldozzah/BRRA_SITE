@@ -7,7 +7,6 @@ import managementDavidFBanda from "@/assets/management/management-david-f-banda.
 import managementDennisKamfwa from "@/assets/management/management-dennis-kamfwa.jpg";
 import managementNyantangaChibwe from "@/assets/management/management-nyantanga-chibwe.jpg";
 import managementRichardEChanda from "@/assets/management/management-richard-e-chanda.jpg";
-import managementJoelMumba from "@/assets/management/management-joel-mumba.jpg";
 import { Mail, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -27,7 +26,6 @@ const directors = [
 const managers = [
   { name: "Nyantanga Chibwe", role: "Manager - Finance", email: "nh.chibwe@brra.org.zm", image: managementNyantangaChibwe },
   { name: "Richard E. Chanda", role: "Manager – Internal Audit", email: "r.chanda@brra.org.zm", image: managementRichardEChanda },
-  { name: "Joel Mumba", role: "Manager – Regulatory Services & Licensing Systems", email: "J.Mumba@brra.org.zm", image: managementJoelMumba },
 ];
 
 const initials = (n: string) => n.split(" ").map((p) => p[0]).slice(0, 2).join("");
@@ -81,11 +79,11 @@ export default function Management() {
       {/* Directors */}
       <section className="border-t border-border bg-noir-elevated/40 py-20">
         <div className="container-wide">
-          <div className="max-w-2xl mb-10">
+          <div className="max-w-2xl mb-10 mx-auto text-center">
             <div className="eyebrow mb-3">Management</div>
             <h2 className="font-display text-3xl lg:text-4xl font-bold leading-tight">Directors</h2>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border max-w-4xl mx-auto">
             {directors.map((m) => <MemberCard key={m.name} m={m} />)}
           </div>
         </div>
@@ -93,11 +91,11 @@ export default function Management() {
 
       {/* Managers */}
       <section className="py-20 container-wide">
-        <div className="max-w-2xl mb-10">
+        <div className="max-w-2xl mb-10 mx-auto text-center">
           <div className="eyebrow mb-3">Department Heads</div>
           <h2 className="font-display text-3xl lg:text-4xl font-bold leading-tight">Managers</h2>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border max-w-4xl mx-auto">
           {managers.map((m) => <MemberCard key={m.name} m={m} />)}
         </div>
       </section>
