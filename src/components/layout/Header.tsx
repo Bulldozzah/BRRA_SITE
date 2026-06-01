@@ -42,12 +42,6 @@ export default function Header() {
 
         <div className="hidden lg:flex items-center gap-3">
           <Link
-            to="/ria-submission"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Submit RIA
-          </Link>
-          <Link
             to="/portal/login"
             className="inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold bg-gradient-gold text-primary-foreground rounded-sm hover:shadow-gold transition-all"
           >
@@ -77,7 +71,6 @@ export default function Header() {
             <MobileLink to="/news" label="News" onClick={() => setOpen(false)} />
             <MobileLink to="/information" label="Information" onClick={() => setOpen(false)} />
             <div className="pt-4 mt-4 border-t border-border space-y-2">
-              <MobileLink to="/ria-submission" label="Submit RIA" onClick={() => setOpen(false)} />
               <Link
                 to="/portal/login"
                 onClick={() => setOpen(false)}

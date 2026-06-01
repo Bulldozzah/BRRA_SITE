@@ -160,9 +160,6 @@ export default function Index() {
                 <Link to="/ria" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-gold text-primary-foreground font-semibold rounded-sm hover:shadow-gold transition-all">
                   Learn the RIA process
                 </Link>
-                <Link to="/ria-submission" className="inline-flex items-center gap-2 px-6 py-3 border border-border font-semibold rounded-sm hover:border-primary hover:text-primary transition-all">
-                  Submit a RIA
-                </Link>
               </div>
             </div>
 

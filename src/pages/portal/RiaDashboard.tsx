@@ -72,12 +72,13 @@ export default function RiaDashboard() {
 }
 
 function RiaContent({ userId, userEmail, userName, userRole, isAuthenticated }: { userId: string; userEmail: string; userName: string; userRole: string; isAuthenticated: boolean }) {
-  const [activeTab, setActiveTab] = useState<"submissions" | "submit" | "track">(isAuthenticated ? "submissions" : "submit");
+  const isStaffUser = userRole === "staff" || userRole === "admin";
+  const [activeTab, setActiveTab] = useState<"submissions" | "submit" | "track">(isAuthenticated ? "submissions" : "track");
   const queryClient = useQueryClient();
 
   const navItems = [
     { id: "submissions" as const, label: "My Submissions", icon: FileText },
-    { id: "submit" as const, label: "Submit RIA", icon: Send },
+    ...(isStaffUser ? [{ id: "submit" as const, label: "Submit RIA", icon: Send }] : []),
     { id: "track" as const, label: "Track Submission", icon: Search },
   ];
 
@@ -179,28 +180,16 @@ function RiaContent({ userId, userEmail, userName, userRole, isAuthenticated }: 
         ) : (
           <>
             {activeTab === "submissions" && <SubmissionsTab userId={userId} userEmail={userEmail} />}
-            {activeTab === "submit" && (
-              (userRole === "staff" || userRole === "admin") ? (
-                <SubmitTab
-                  userId={userId}
-                  userEmail={userEmail}
-                  userName={userName}
-                  onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
-                    setActiveTab("submissions");
-                  }}
-                />
-              ) : (
-                <RequestToSubmitTab
-                  userId={userId}
-                  userEmail={userEmail}
-                  userName={userName}
-                  onApprovedSubmit={() => {
-                    queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
-                    setActiveTab("submissions");
-                  }}
-                />
-              )
+            {activeTab === "submit" && isStaffUser && (
+              <SubmitTab
+                userId={userId}
+                userEmail={userEmail}
+                userName={userName}
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ["my_ria_submissions"] });
+                  setActiveTab("submissions");
+                }}
+              />
             )}
             {activeTab === "track" && <TrackTab />}
           </>

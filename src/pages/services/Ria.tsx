@@ -173,10 +173,7 @@ export default function Ria() {
             Submit your Regulatory Impact Assessment framework for review and guidance.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
-            <Link to="/ria-submission" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-gold text-primary-foreground font-display font-semibold text-sm rounded-sm hover:opacity-90 transition-opacity">
-              Submit RIA <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link to="/ria-tracking" className="inline-flex items-center gap-2 px-6 py-3 border border-border bg-background text-foreground font-display font-semibold text-sm rounded-sm hover:bg-noir-elevated transition-colors">
+            <Link to="/ria-tracking" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-gold text-primary-foreground font-display font-semibold text-sm rounded-sm hover:opacity-90 transition-opacity">
               Track Submission
             </Link>
           </div>
