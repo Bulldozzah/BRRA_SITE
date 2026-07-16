@@ -35,9 +35,18 @@ DECLARE
   status_color TEXT;
   status_label TEXT;
   email_html TEXT;
-  resend_api_key TEXT := 're_5NwCTYJa_PM2zyixPak4sBuDRZpC6sCTC';
-  from_email TEXT := 'Webmaster <team@wiseuprent.com>';
+  mail_secret TEXT;
 BEGIN
+  -- Shared secret for the send-email Edge Function, stored in Supabase Vault:
+  -- select vault.create_secret('<secret>', 'mail_webhook_secret');
+  SELECT decrypted_secret INTO mail_secret
+  FROM vault.decrypted_secrets
+  WHERE name = 'mail_webhook_secret';
+
+  IF mail_secret IS NULL OR mail_secret = '' THEN
+    RAISE WARNING 'mail_webhook_secret not found in Vault; email to % not sent', recipient_email;
+    RETURN;
+  END IF;
   -- Determine subject, body message, action note and colors based on notification type
   CASE notification_type
     WHEN 'submitted' THEN
@@ -138,15 +147,14 @@ BEGIN
     || '<p>This is an automated notification. Please do not reply to this email.</p>'
     || '</div></body></html>';
 
-  -- Send via pg_net HTTP POST to Resend API
+  -- Send via pg_net HTTP POST to the send-email Edge Function (Microsoft Graph)
   PERFORM net.http_post(
-    url := 'https://api.resend.com/emails',
+    url := 'https://vdkgbblnfbzjdgvafyxm.supabase.co/functions/v1/send-email',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || resend_api_key
+      'x-mail-secret', mail_secret
     ),
     body := jsonb_build_object(
-      'from', from_email,
       'to', jsonb_build_array(recipient_email),
       'subject', email_subject,
       'html', email_html

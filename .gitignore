@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Local setup notes containing credentials - never commit
+EMAIL_SETUP_GUIDE.txt
+EMAIL_SETUP_TODO.txt
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
