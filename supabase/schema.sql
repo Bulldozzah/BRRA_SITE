@@ -169,6 +169,7 @@ DROP POLICY IF EXISTS "positions_manage_admin"      ON public.positions;
 
 DROP POLICY IF EXISTS "staff_profiles_select"       ON public.staff_profiles;
 DROP POLICY IF EXISTS "staff_profiles_update_own"   ON public.staff_profiles;
+DROP POLICY IF EXISTS "staff_profiles_insert_own"   ON public.staff_profiles;
 DROP POLICY IF EXISTS "staff_profiles_manage_admin" ON public.staff_profiles;
 
 -- profiles policies
@@ -216,6 +217,10 @@ CREATE POLICY "staff_profiles_update_own"
   ON public.staff_profiles FOR UPDATE
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "staff_profiles_insert_own"
+  ON public.staff_profiles FOR INSERT
+  WITH CHECK (user_id = auth.uid() AND public.is_staff_or_admin());
 
 CREATE POLICY "staff_profiles_manage_admin"
   ON public.staff_profiles FOR ALL USING (public.is_admin());

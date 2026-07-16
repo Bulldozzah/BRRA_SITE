@@ -101,7 +101,8 @@ function StaffProfileForm({ navigate }: { navigate: ReturnType<typeof useNavigat
     },
   });
 
-  // Populate form when staff profile loads
+  // Populate form when staff profile loads; prefill from the account when
+  // no profile exists yet (staff create their own profile)
   useEffect(() => {
     if (staffProfile) {
       setForm({
@@ -117,35 +118,49 @@ function StaffProfileForm({ navigate }: { navigate: ReturnType<typeof useNavigat
         date_joined: staffProfile.date_joined || "",
         notes: staffProfile.notes || "",
       });
+    } else if (!profileLoading && user) {
+      setForm(f => ({
+        ...f,
+        full_name: f.full_name || user.name || "",
+        email: f.email || user.email || "",
+      }));
     }
-  }, [staffProfile]);
+  }, [staffProfile, profileLoading, user]);
 
   const updateMutation = useMutation({
     mutationFn: async () => {
-      if (!staffProfile) throw new Error("No staff profile found");
-      const { error } = await supabase
-        .from("staff_profiles")
-        .update({
-          full_name: form.full_name.trim(),
-          other_names: form.other_names.trim() || null,
-          email: form.email.trim(),
-          phone: form.phone.trim() || null,
-          nrc_number: form.nrc_number.trim() || null,
-          employee_number: form.employee_number.trim() || null,
-          department_id: form.department_id || null,
-          position_id: form.position_id || null,
-          grade_id: form.grade_id || null,
-          date_joined: form.date_joined || null,
-          notes: form.notes.trim() || null,
-        })
-        .eq("id", staffProfile.id);
-      if (error) throw error;
+      const values = {
+        full_name: form.full_name.trim(),
+        other_names: form.other_names.trim() || null,
+        email: form.email.trim(),
+        phone: form.phone.trim() || null,
+        nrc_number: form.nrc_number.trim() || null,
+        employee_number: form.employee_number.trim() || null,
+        department_id: form.department_id || null,
+        position_id: form.position_id || null,
+        grade_id: form.grade_id || null,
+        date_joined: form.date_joined || null,
+        notes: form.notes.trim() || null,
+      };
+      if (staffProfile) {
+        const { error } = await supabase
+          .from("staff_profiles")
+          .update(values)
+          .eq("id", staffProfile.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("staff_profiles")
+          .insert({ ...values, user_id: user!.id });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my_staff_profile_full"] });
       qc.invalidateQueries({ queryKey: ["my_staff_profile"] });
       qc.invalidateQueries({ queryKey: ["staff_profiles"] });
-      toast.success("Profile updated successfully");
+      qc.invalidateQueries({ queryKey: ["staff_profile_check"] });
+      toast.success(staffProfile ? "Profile updated successfully" : "Profile created successfully");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -167,20 +182,6 @@ function StaffProfileForm({ navigate }: { navigate: ReturnType<typeof useNavigat
     );
   }
 
-  if (!staffProfile) {
-    return (
-      <div className="max-w-lg mx-auto py-20">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <AlertCircle className="h-10 w-10 text-red-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-red-800 mb-2">No Staff Profile Found</h3>
-          <p className="text-sm text-red-600">
-            Your account has not been linked to a staff profile yet. Please contact your administrator to set up your staff profile.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Back button */}
@@ -197,9 +198,11 @@ function StaffProfileForm({ navigate }: { navigate: ReturnType<typeof useNavigat
         <div>
           <p className="text-xs font-mono uppercase tracking-[0.2em] text-amber-600 mb-2">Staff Portal</p>
           <h2 className="text-3xl font-bold text-gray-900">My Profile</h2>
-          <p className="text-gray-600 mt-1">View and update your staff profile information.</p>
+          <p className="text-gray-600 mt-1">
+            {staffProfile ? "View and update your staff profile information." : "Set up your staff profile information."}
+          </p>
         </div>
-        {staffProfile.is_active ? (
+        {staffProfile && (staffProfile.is_active ? (
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-semibold">
             <CheckCircle2 className="h-3.5 w-3.5" /> Active
           </span>
@@ -207,11 +210,21 @@ function StaffProfileForm({ navigate }: { navigate: ReturnType<typeof useNavigat
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs font-semibold">
             <AlertCircle className="h-3.5 w-3.5" /> Inactive
           </span>
-        )}
+        ))}
       </div>
 
-      {/* Incomplete banner */}
-      {isProfileIncomplete && (
+      {/* Setup / incomplete banner */}
+      {!staffProfile ? (
+        <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <AlertCircle className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+          <div>
+            <h4 className="text-sm font-semibold text-blue-800">Welcome — set up your staff profile</h4>
+            <p className="text-sm text-blue-700 mt-0.5">
+              You have been granted staff access. Please fill in your details below and save to create your staff profile.
+            </p>
+          </div>
+        </div>
+      ) : isProfileIncomplete && (
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">
           <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
           <div>
@@ -370,7 +383,7 @@ function StaffProfileForm({ navigate }: { navigate: ReturnType<typeof useNavigat
             className="inline-flex items-center gap-2 px-6 py-2.5 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition-colors text-sm disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            {updateMutation.isPending ? "Saving…" : "Save Profile"}
+            {updateMutation.isPending ? "Saving…" : staffProfile ? "Save Profile" : "Create Profile"}
           </button>
         </div>
       </div>

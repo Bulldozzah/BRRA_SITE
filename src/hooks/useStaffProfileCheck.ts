@@ -6,9 +6,10 @@ import { useAuth } from "@/context/AuthContext";
 
 /**
  * Hook that checks if the current staff user has a complete profile.
- * If the profile is incomplete (missing phone, department, or position),
- * redirects them to /portal/staff/profile to complete it.
- * 
+ * If no profile exists yet (staff create their own), or the profile is
+ * incomplete (missing phone, department, or position), redirects them to
+ * /portal/staff/profile to create/complete it.
+ *
  * Does NOT redirect if the user is already on the profile page.
  */
 export function useStaffProfileCheck() {
@@ -32,13 +33,15 @@ export function useStaffProfileCheck() {
   });
 
   const isProfilePage = location.pathname === "/portal/staff/profile";
-  const isIncomplete = staffProfile && (!staffProfile.phone || !staffProfile.department_id || !staffProfile.position_id);
+  const isIncomplete =
+    staffProfile === null ||
+    (!!staffProfile && (!staffProfile.phone || !staffProfile.department_id || !staffProfile.position_id));
 
   useEffect(() => {
     if (isLoading || !user || isProfilePage) return;
     if (user.role !== "staff") return;
 
-    // If staff profile exists but is incomplete, redirect to profile page
+    // If staff profile is missing or incomplete, redirect to profile page
     if (isIncomplete) {
       navigate("/portal/staff/profile", { replace: true });
     }
