@@ -141,6 +141,7 @@ BEGIN
   email_html := email_html
     || '<div class="action-note">' || email_action_note || '</div>'
     || '<p>Thank you.</p>'
+    || '<p style="margin:16px 0"><a href="https://brra.org.zm/portal/login" style="display:inline-block;background:#b8860b;color:#ffffff;text-decoration:none;padding:10px 20px;border-radius:4px;font-weight:bold">Open BRRA Portal</a></p>'
     || '</div>'
     || '<div class="footer">'
     || '<p>Business Regulatory Review Agency (BRRA) — Staff Portal</p>'
